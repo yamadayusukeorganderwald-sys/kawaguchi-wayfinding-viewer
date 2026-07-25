@@ -182,30 +182,62 @@ function App() {
       <div
         style={{
           width: "280px",
-          padding: "24px",
+          height: "100vh",
+          padding: "20px",
           boxSizing: "border-box",
           backgroundColor: "#f4f4f4",
+          overflowY: "auto",
+          flexShrink: 0,
         }}
       >
-        <h1>川口駅 Wayfinding Viewer</h1>
-        <p>地点を選ぶとカメラが移動します。</p>
+        <h1
+          style={{
+            fontSize: "28px",
+            marginBottom: "16px",
+          }}
+        >
+          川口駅
+          <br />
+          Wayfinding Viewer
+        </h1>
 
-        {places.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => setPlace(item)}
-            style={{
-              display: "block",
-              width: "100%",
-              marginBottom: "8px",
-              padding: "12px",
-              backgroundColor: item.id === place.id ? "#222" : "#fff",
-              color: item.id === place.id ? "#fff" : "#222",
-            }}
-          >
-            {item.name}
-          </button>
-        ))}
+        <p
+          style={{
+            fontSize: "13px",
+            lineHeight: "1.5",
+            marginBottom: "20px",
+          }}
+        >
+          現地調査をもとに<br />
+          歩行動線を可視化する試作です。
+        </p>
+
+        <div
+          style={{
+            display: "flex",
+            gap: "6px",
+            marginBottom: "20px",
+          }}
+        >
+          {places.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setPlace(item)}
+              style={{
+                flex: 1,
+                padding: "6px 4px",
+                fontSize: "13px",
+                border: "1px solid #ccc",
+                borderRadius: "4px",
+                backgroundColor: item.id === place.id ? "#222" : "#fff",
+                color: item.id === place.id ? "#fff" : "#222",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {item.name}
+            </button>
+          ))}
+        </div>
 
         <h2>{place.name}</h2>
         <p>{place.description}</p>
@@ -214,8 +246,11 @@ function App() {
           alt={place.name}
           style={{
             width: "100%",
+            height: "120px",
             marginTop: "12px",
             borderRadius: "8px",
+            objectFit: "cover",
+            display: "block",
           }}
         />
       </div>
