@@ -7,33 +7,103 @@ const places = [
   {
     id: "entrance",
     name: "駅入口",
+    type: "route",
     latitude: 35.802099863062594,
     longitude: 139.71802508125836,
     height: 300,
     description: "JR川口駅 東口",
-
-    image: "/images/entrance.jpg"
+    image: "/images/entrance.jpg",
+    observation: "駅を出ると視界は開けるが、進行方向を示す情報が少ない。",
+    problem: "初めて来た人は樹モール方面への進路が分かりにくい。",
+    proposal: "目的地方向を示す案内サインを駅出口付近に追加する。"
   },
 
   {
     id: "bridge",
     name: "歩道橋",
+    type: "route",
     latitude: 35.80243279370009,
     longitude: 139.718627481533,
     height: 300,
     description: "駅前歩道橋",
-    image: "/images/bridge.jpg"
+    image: "/images/bridge.jpg",
+    observation: "歩道橋上から周辺のランドマークを見渡せる。",
+    problem: "降り口が複数あり迷いやすい。",
+    proposal: "降り口ごとの目的地表示を強化する。"
   },
 
   {
     id: "shopping",
     name: "商店街",
+    type: "route",
     longitude: 139.72025146723684,
     latitude: 35.8029789998629,
     height: 300,
     description: "樹モール商店街",
-    image: "/images/shopping.jpg"
+    image: "/images/shopping.jpg",
+    observation: "アーケード入口は見つけやすい。",
+    problem: "駅から連続した案内がない。",
+    proposal: "駅出口から商店街まで誘導サインを設置する。"
+  },
+
+  {
+    id: "street-entrance",
+    name: "街への入口",
+    type: "observation",
+    longitude: 139.71918124386173,
+    latitude: 35.80271048406026,
+    height: 300,
+    description: "樹モールへ向かう横断歩道",
+    image: "/images/street-entrance.jpg",
+    observation: "駅を出て街へ向かう際、最も「街に入る」という印象を受ける地点。",
+    problem: "街への入口として印象的だが、樹モールへ続く場所であることを示す情報は少ない。",
+    proposal: "商店街名やエリアマップを設置し、街への入口として認識しやすくする。"
+  },
+
+  {
+    id: "sushiro-entrance",
+    name: "スシロー前",
+    type: "observation",
+    longitude: 139.7197308441633,
+    latitude: 35.80337721479965,
+    height: 300,
+    description: "樹モール商店街 スシロー前",
+    image: "/images/sushiro-entrance.jpg",
+    observation: "ららテラス裏から樹モール商店街をつなぐ動線、スシローやカラオケ店などがある",
+    problem: "そこそこ広い道だが、動線として繋がる道がなく、車通りもなく人気が少ない道。",
+    proposal: "車が通らないことを活かし、樹モール商店街のように歩行者の道として整備すればにぎわいそう。"
+  },
+
+  {
+    id: "kawaguchi-shinkin-mae",
+    name: "川口信用金庫前",
+    type: "observation",
+    longitude: 139.71907161752023,
+    latitude: 35.80320109643959,
+    height: 300,
+    description: "川口信用金庫前",
+    image: "/images/kawaguchi-shinkin-mae.jpg",
+    observation: "川口信用金庫の前には、多くの歩行者が通る動線がある。",
+    problem: "周囲の建物が高いため、視界が遮られやすく、情報が得にくい。",
+    proposal: "情報を視覚的に伝えるための案内サインを設置する。"
+  },
+
+  {
+    id: "casty-mae",
+    name: "キャスティ前",
+    type: "observation",
+    longitude: 139.71876445714705,
+    latitude: 35.80237024519396,
+    height: 300,
+    description: "キャスティ前",
+    image: "/images/casty-mae.jpg",
+    observation: "キャスティの前には、多くの歩行者が通る動線がある。",
+    problem: "周囲の建物が高いため、視界が遮られやすく、情報が得にくい。",
+    proposal: "情報を視覚的に伝えるための案内サインを設置する。"
   }
+
+
+
 ];
 
 function App() {
@@ -93,6 +163,7 @@ function App() {
     }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
     places.forEach((item) => {
+      const isRoute = item.type === "route";
       const entity = viewer.entities.add({
         name: item.name,
 
@@ -102,8 +173,12 @@ function App() {
         ),
 
         point: {
-          pixelSize: 12,
-          color: Cesium.Color.RED,
+          pixelSize: isRoute ? 12 : 10,
+          color: isRoute
+            ? Cesium.Color.RED
+            : Cesium.Color.WHITE,
+          outlineColor: Cesium.Color.BLACK,
+          outlineWidth: 1,
         },
 
         label: {
@@ -159,11 +234,15 @@ function App() {
     entitiesRef.current.forEach((entity) => {
       const isSelected = entity.place.id === place.id;
 
-      entity.point.pixelSize = isSelected ? 15 : 12;
+      const isRoute = entity.place.type === "route";
+
+      entity.point.pixelSize = isSelected
+        ? (isRoute ? 15 : 11)
+        : (isRoute ? 12 : 8);
 
       entity.point.color = isSelected
         ? Cesium.Color.LIME
-        : Cesium.Color.RED;
+        : (isRoute ? Cesium.Color.RED : Cesium.Color.GRAY);
     });
 
   }, [place]);
@@ -187,6 +266,7 @@ function App() {
           boxSizing: "border-box",
           backgroundColor: "#f4f4f4",
           overflowY: "auto",
+          scrollbarGutter: "stable",
           flexShrink: 0,
         }}
       >
@@ -219,40 +299,120 @@ function App() {
             marginBottom: "20px",
           }}
         >
-          {places.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setPlace(item)}
+          {places
+            .filter((item) => item.type === "route")
+            .map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setPlace(item)}
+                style={{
+                  flex: 1,
+                  padding: "6px 4px",
+                  fontSize: "13px",
+                  border: "1px solid #ccc",
+                  borderRadius: "4px",
+                  backgroundColor: item.id === place.id ? "#222" : "#fff",
+                  color: item.id === place.id ? "#fff" : "#222",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {item.name}
+              </button>
+            ))}
+        </div>
+        <p
+          style={{
+            margin: "0 0 4px",
+          }}
+        >
+          {place.description}
+        </p>
+        <div>
+          <img
+            src={place.image}
+            alt={place.name}
+            style={{
+              width: "100%",
+              height: "140px",
+              marginTop: "6px",
+              marginBottom: "6px",
+              borderRadius: "8px",
+              objectFit: "cover",
+              display: "block",
+            }}
+          />
+          <section
+            style={{
+              marginBottom: "3px",
+            }}
+          >
+            <h3
               style={{
-                flex: 1,
-                padding: "6px 4px",
-                fontSize: "13px",
-                border: "1px solid #ccc",
-                borderRadius: "4px",
-                backgroundColor: item.id === place.id ? "#222" : "#fff",
-                color: item.id === place.id ? "#fff" : "#222",
-                whiteSpace: "nowrap",
+                fontSize: "12px",
+                margin: "0 0 3px",
               }}
             >
-              {item.name}
-            </button>
-          ))}
-        </div>
+              観察
+            </h3>
 
-        <h2>{place.name}</h2>
-        <p>{place.description}</p>
-        <img
-          src={place.image}
-          alt={place.name}
-          style={{
-            width: "100%",
-            height: "120px",
-            marginTop: "12px",
-            borderRadius: "8px",
-            objectFit: "cover",
-            display: "block",
-          }}
-        />
+            <p
+              style={{
+                margin: 0,
+                fontSize: "10px",
+              }}
+            >
+              {place.observation}
+            </p>
+          </section>
+
+          <section
+            style={{
+              marginBottom: "3px",
+            }}
+          >
+            <h3
+              style={{
+                fontSize: "12px",
+                margin: "0 0 3px",
+              }}
+            >
+              課題
+            </h3>
+
+            <p
+              style={{
+                margin: 0,
+                fontSize: "10px",
+              }}
+            >
+              {place.problem}
+            </p>
+          </section>
+
+          <section
+            style={{
+              marginBottom: "3px",
+            }}
+          >
+            <h3
+              style={{
+                fontSize: "12px",
+                margin: "0 0 3px",
+              }}
+            >
+              改善案
+            </h3>
+
+            <p
+              style={{
+                margin: 0,
+                fontSize: "10px",
+              }}
+            >
+              {place.proposal}
+            </p>
+          </section>
+        </div>
       </div>
 
       <div
