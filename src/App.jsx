@@ -6,7 +6,7 @@ import "cesium/Build/Cesium/Widgets/widgets.css";
 const places = [
   {
     id: "entrance",
-    name: "駅入口",
+    name: "駅東口",
     type: "route",
     latitude: 35.802099863062594,
     longitude: 139.71802508125836,
@@ -42,6 +42,34 @@ const places = [
     description: "樹モール商店街",
     image: "/images/shopping.jpg",
     observation: "アーケード入口は見つけやすい。",
+    problem: "駅から連続した案内がない。",
+    proposal: "駅出口から商店街まで誘導サインを設置する。"
+  },
+
+  {
+    id: "city-hall",
+    name: "市役所",
+    type: "route",
+    longitude: 139.7233353910908,
+    latitude: 35.80698889394037,
+    height: 300,
+    description: "川口市役所",
+    image: "/images/city-hall.jpg",
+    observation: "川口市役所は、駅からの主要な目的地の一つである。",
+    problem: "駅から連続した案内がない。",
+    proposal: "駅出口から商店街まで誘導サインを設置する。"
+  },
+
+  {
+    id: "park-tower",
+    name: "パークタワー",
+    type: "observation",
+    longitude: 139.72271125386422,
+    latitude: 35.804990009606726,
+    height: 300,
+    description: "パークタワー",
+    image: "/images/park-tower.jpg",
+    observation: "パークタワーは、駅からの主要な目的地の一つである。",
     problem: "駅から連続した案内がない。",
     proposal: "駅出口から商店街まで誘導サインを設置する。"
   },
