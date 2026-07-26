@@ -22,8 +22,8 @@ const places = [
     id: "bridge",
     name: "歩道橋",
     type: "route",
-    latitude: 35.80243279370009,
-    longitude: 139.718627481533,
+    latitude: 35.802360459808824,
+    longitude: 139.7185476298926,
     height: 300,
     description: "駅前歩道橋",
     image: "/images/bridge.jpg",
@@ -101,16 +101,27 @@ const places = [
     problem: "周囲の建物が高いため、視界が遮られやすく、情報が得にくい。",
     proposal: "情報を視覚的に伝えるための案内サインを設置する。"
   }
+];
 
-
-
+const routes = [
+  {
+    id: "main-route",
+    positions: [
+      [139.71802508125836, 35.802099863062594],
+      [139.7185476298926, 35.802360459808824],
+      [139.71918124386173, 35.80271048406026],
+      [139.72025146723684, 35.8029789998629],
+    ],
+  },
 ];
 
 function App() {
   const [place, setPlace] = useState(places[0]);
+  const [showRoute, setShowRoute] = useState(false);
   const cesiumContainer = useRef(null);
   const viewerRef = useRef(null);
   const entitiesRef = useRef([]);
+  const routeEntitiesRef = useRef([]);
 
   useEffect(() => {
     const viewer = new Cesium.Viewer(cesiumContainer.current, {
@@ -199,6 +210,23 @@ function App() {
 
     });
 
+    routes.forEach((route) => {
+      const routeEntity = viewer.entities.add({
+        show: false,
+
+        polyline: {
+          positions: route.positions.map(([lon, lat]) =>
+            Cesium.Cartesian3.fromDegrees(lon, lat, 5)
+          ),
+          material: Cesium.Color.DODGERBLUE.withAlpha(0.8),
+          width: 8,
+          clampToGround: true,
+        },
+      });
+
+      routeEntitiesRef.current.push(routeEntity);
+    });
+
     const resizeTimer = setTimeout(() => {
       if (!viewer.isDestroyed()) {
         viewer.resize();
@@ -213,6 +241,7 @@ function App() {
 
       viewerRef.current = null;
       entitiesRef.current = [];
+      routeEntitiesRef.current = [];
     };
 
   }, []);
@@ -247,7 +276,11 @@ function App() {
 
   }, [place]);
 
-
+  useEffect(() => {
+    routeEntitiesRef.current.forEach((entity) => {
+      entity.show = showRoute;
+    });
+  }, [showRoute]);
 
   return (
     <div
@@ -296,7 +329,7 @@ function App() {
           style={{
             display: "flex",
             gap: "6px",
-            marginBottom: "20px",
+            marginBottom: "5px",
           }}
         >
           {places
@@ -320,6 +353,60 @@ function App() {
               </button>
             ))}
         </div>
+
+        <div
+          onClick={() => setShowRoute(!showRoute)}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            width: "140px",      // 好みで160～200pxくらい
+            marginLeft: "auto",
+            marginBottom: "20px",
+            padding: "8px 12px",
+            paddingLeft: "15px",
+            border: "1px solid #ddd",
+            borderRadius: "8px",
+            background: "#fff",
+            cursor: "pointer",
+            userSelect: "none",
+          }}
+        >
+          <span
+            style={{
+              fontSize: "12px",
+              fontWeight: "400",
+            }}
+          >
+            ルート表示
+          </span>
+
+          <div
+            style={{
+              width: "38px",
+              height: "22px",
+              borderRadius: "13px",
+              background: showRoute ? "#2196F3" : "#bbb",
+              position: "relative",
+              transition: "0.2s",
+            }}
+          >
+            <div
+              style={{
+                width: "18px",
+                height: "18px",
+                borderRadius: "50%",
+                background: "#fff",
+                position: "absolute",
+                top: "2px",
+                left: showRoute ? "18px" : "2px",
+                transition: "0.2s",
+                boxShadow: "0 1px 4px rgba(0,0,0,.3)",
+              }}
+            />
+          </div>
+        </div>
+
         <p
           style={{
             margin: "0 0 4px",
