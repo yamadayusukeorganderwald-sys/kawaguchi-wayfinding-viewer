@@ -105,19 +105,71 @@ const places = [
 
 const routes = [
   {
-    id: "main-route",
-    positions: [
-      [139.71802508125836, 35.802099863062594],
-      [139.7185476298926, 35.802360459808824],
-      [139.71918124386173, 35.80271048406026],
-      [139.72025146723684, 35.8029789998629],
+    id: "entrance-bridge",
+    from: "entrance",
+    to: "bridge",
+    path: [
+      "entrance",
+      "bridge",
+    ],
+  },
+  {
+    id: "bridge-shopping",
+    from: "bridge",
+    to: "shopping",
+    path: [
+      "bridge",
+      "casty-mae",
+      "street-entrance",
+      "shopping",
+    ],
+  },
+  {
+    id: "entrance-shopping",
+    from: "entrance",
+    to: "shopping",
+    path: [
+      "entrance",
+      "bridge",
+      "casty-mae",
+      "street-entrance",
+      "shopping",
     ],
   },
 ];
 
+function findRoute(fromId, toId) {
+  const route = routes.find(
+    (item) =>
+      (item.from === fromId && item.to === toId) ||
+      (item.from === toId && item.to === fromId)
+  );
+
+  if (!route) return null;
+
+  const isReverse =
+    route.from === toId &&
+    route.to === fromId;
+
+  const placeIds = isReverse
+    ? [...route.path].reverse()
+    : route.path;
+
+  return placeIds
+    .map((id) =>
+      places.find((place) => place.id === id)
+    )
+    .filter(Boolean)
+    .map((place) => [
+      place.longitude,
+      place.latitude,
+    ]);
+}
+
 function App() {
   const [place, setPlace] = useState(places[0]);
   const [showRoute, setShowRoute] = useState(false);
+  const [routeAnchor, setRouteAnchor] = useState(null);
   const cesiumContainer = useRef(null);
   const viewerRef = useRef(null);
   const entitiesRef = useRef([]);
@@ -210,22 +262,18 @@ function App() {
 
     });
 
-    routes.forEach((route) => {
-      const routeEntity = viewer.entities.add({
-        show: false,
+    const routeEntity = viewer.entities.add({
+      show: false,
 
-        polyline: {
-          positions: route.positions.map(([lon, lat]) =>
-            Cesium.Cartesian3.fromDegrees(lon, lat, 5)
-          ),
-          material: Cesium.Color.DODGERBLUE.withAlpha(0.8),
-          width: 8,
-          clampToGround: true,
-        },
-      });
-
-      routeEntitiesRef.current.push(routeEntity);
+      polyline: {
+        positions: [],
+        material: Cesium.Color.DODGERBLUE.withAlpha(0.8),
+        width: 8,
+        clampToGround: true,
+      },
     });
+
+    routeEntitiesRef.current.push(routeEntity);
 
     const resizeTimer = setTimeout(() => {
       if (!viewer.isDestroyed()) {
@@ -277,10 +325,37 @@ function App() {
   }, [place]);
 
   useEffect(() => {
-    routeEntitiesRef.current.forEach((entity) => {
-      entity.show = showRoute;
-    });
-  }, [showRoute]);
+    const entity = routeEntitiesRef.current[0];
+
+    if (!entity) return;
+
+    if (
+      !showRoute ||
+      !routeAnchor ||
+      routeAnchor.id === place.id
+    ) {
+      entity.show = false;
+      return;
+    }
+
+    const positions = findRoute(
+      routeAnchor.id,
+      place.id
+    );
+
+    if (!positions) {
+      entity.show = false;
+      return;
+    }
+
+    entity.polyline.positions = positions.map(
+      ([lon, lat]) =>
+        Cesium.Cartesian3.fromDegrees(lon, lat, 5)
+    );
+
+    entity.show = true;
+
+  }, [showRoute, routeAnchor, place]);
 
   return (
     <div
@@ -353,6 +428,36 @@ function App() {
               </button>
             ))}
         </div>
+
+        <button
+          onClick={() => {
+            setRouteAnchor(place);
+            setShowRoute(true);
+          }}
+          style={{
+            width: "100%",
+            padding: "8px",
+            marginBottom: "8px",
+            border: "1px solid #ccc",
+            borderRadius: "6px",
+            background: "#fff",
+            cursor: "pointer",
+          }}
+        >
+          この地点を起点に設定
+        </button>
+
+        <p
+          style={{
+            fontSize: "11px",
+            lineHeight: "1.5",
+            margin: "0 0 10px",
+          }}
+        >
+          起点：{routeAnchor ? routeAnchor.name : "未設定"}
+          <br />
+          終点：{place.name}
+        </p>
 
         <div
           onClick={() => setShowRoute(!showRoute)}
