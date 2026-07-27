@@ -1,0 +1,42 @@
+export const edges = [
+  {
+    id: "entrance-bridge",
+    from: "entrance",
+    to: "bridge",
+    distance: 60,
+    walkingTime: 50,
+    bidirectional: true,
+  },
+  {
+    id: "bridge-casty-mae",
+    from: "bridge",
+    to: "casty-mae",
+    distance: 30,
+    walkingTime: 25,
+    bidirectional: true,
+  },
+  {
+    id: "casty-mae-street-entrance",
+    from: "casty-mae",
+    to: "street-entrance",
+    distance: 80,
+    walkingTime: 65,
+    bidirectional: true,
+  },
+  {
+    id: "street-entrance-shopping",
+    from: "street-entrance",
+    to: "shopping",
+    distance: 120,
+    walkingTime: 100,
+    bidirectional: true,
+  },
+  {
+    id: "shopping-cityhall",
+    from: "shopping",
+    to: "city-hall",
+    distance: 200,
+    walkingTime: 180,
+    bidirectional: true,
+  },
+];
