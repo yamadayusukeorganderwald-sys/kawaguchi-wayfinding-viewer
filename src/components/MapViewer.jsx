@@ -9,7 +9,9 @@ function MapViewer({
     place,
     setPlace,
     showRoute,
+    setShowRoute,
     routeAnchor,
+    setRouteAnchor,
     onMapClick,
     clickedPosition,
 }) {
@@ -18,6 +20,11 @@ function MapViewer({
     const entitiesRef = useRef([]);
     const routeEntitiesRef = useRef([]);
     const clickedMarkerRef = useRef(null);
+    const currentPlaceRef = useRef(place);
+
+    useEffect(() => {
+        currentPlaceRef.current = place;
+    }, [place]);
 
     useEffect(() => {
         const viewer = new Cesium.Viewer(cesiumContainer.current, {
@@ -78,6 +85,29 @@ function MapViewer({
                 height,
             });
         }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
+        handler.setInputAction(
+            (click) => {
+                const picked = viewer.scene.pick(click.position);
+
+                if (!picked || !picked.id || !picked.id.place) {
+                    return;
+                }
+
+                const startPlace = currentPlaceRef.current;
+                const clickedPlace = picked.id.place;
+
+                if (!startPlace || startPlace.id === clickedPlace.id) {
+                    return;
+                }
+
+                setRouteAnchor(startPlace);
+                setPlace(clickedPlace);
+                setShowRoute(true);
+            },
+            Cesium.ScreenSpaceEventType.LEFT_CLICK,
+            Cesium.KeyboardEventModifier.SHIFT
+        );
 
         const routeEntity = viewer.entities.add({
             show: false,

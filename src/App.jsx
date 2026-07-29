@@ -309,7 +309,9 @@ function App() {
         place={place}
         setPlace={setPlace}
         showRoute={showRoute}
+        setShowRoute={setShowRoute}
         routeAnchor={routeAnchor}
+        setRouteAnchor={setRouteAnchor}
         onMapClick={setClickedPosition}
         clickedPosition={clickedPosition}
       />
