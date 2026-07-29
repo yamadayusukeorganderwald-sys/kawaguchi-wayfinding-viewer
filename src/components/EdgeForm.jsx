@@ -3,12 +3,18 @@ import { useState } from "react";
 function EdgeForm({
     places,
     editingEdge,
+    initialEdge,
     onSave,
     onUpdate,
     onClose,
 }) {
-    const [from, setFrom] = useState(editingEdge?.from ?? "");
-    const [to, setTo] = useState(editingEdge?.to ?? "");
+    const [from, setFrom] = useState(
+        editingEdge?.from ?? initialEdge?.from ?? ""
+    );
+
+    const [to, setTo] = useState(
+        editingEdge?.to ?? initialEdge?.to ?? ""
+    );
     const [distance, setDistance] = useState(editingEdge?.distance ?? "");
     const [walkingTime, setWalkingTime] = useState(editingEdge?.walkingTime ?? "");
     const [bidirectional, setBidirectional] = useState(
@@ -154,7 +160,6 @@ function EdgeForm({
                         onUpdate(edgeData);
                     } else {
                         onSave(edgeData);
-                        onClose();
                     }
                 }}
                 style={{

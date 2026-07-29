@@ -6,6 +6,7 @@ import PlaceForm from "./components/PlaceForm";
 import EdgeList from "./components/EdgeList";
 import EdgeForm from "./components/EdgeForm";
 
+
 const toAppEdge = (edge) => ({
   id: edge.id,
   from: edge.from,
@@ -37,6 +38,7 @@ function App() {
   const [edgeList, setEdgeList] = useState([]);
   const [showEdgeForm, setShowEdgeForm] = useState(false);
   const [editingEdge, setEditingEdge] = useState(null);
+  const [initialEdge, setInitialEdge] = useState(null);
 
   const [isLoading, setIsLoading] = useState(true);
 
@@ -79,6 +81,42 @@ function App() {
   const closeEdgeForm = () => {
     setShowEdgeForm(false);
     setEditingEdge(null);
+    setInitialEdge(null);
+  };
+
+  const handleOpenEdgeForm = () => {
+    if (!routeAnchor || !place) {
+      setEditingEdge(null);
+      setInitialEdge(null);
+      setShowEdgeForm(true);
+      return;
+    }
+
+    const existingEdge = edgeList.find((edge) => {
+      const sameDirection =
+        edge.from === routeAnchor.id &&
+        edge.to === place.id;
+
+      const reverseDirection =
+        edge.bidirectional &&
+        edge.from === place.id &&
+        edge.to === routeAnchor.id;
+
+      return sameDirection || reverseDirection;
+    });
+
+    if (existingEdge) {
+      setEditingEdge(existingEdge);
+      setInitialEdge(null);
+    } else {
+      setEditingEdge(null);
+      setInitialEdge({
+        from: routeAnchor.id,
+        to: place.id,
+      });
+    }
+
+    setShowEdgeForm(true);
   };
 
   const handleAddPlace = async (newPlace) => {
@@ -281,6 +319,7 @@ function App() {
         places={placeList}
         setShowEdgeForm={setShowEdgeForm}
         setEditingEdge={setEditingEdge}
+        onOpenEdgeForm={handleOpenEdgeForm}
         onDeleteEdge={handleDeleteEdge}
       />
 
@@ -298,6 +337,7 @@ function App() {
         <EdgeForm
           places={placeList}
           editingEdge={editingEdge}
+          initialEdge={initialEdge}
           onSave={handleAddEdge}
           onUpdate={handleUpdateEdge}
           onClose={closeEdgeForm}
