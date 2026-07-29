@@ -5,6 +5,7 @@ import { findShortestRoute } from "../utils/routeSearch";
 
 function MapViewer({
     places,
+    edges,
     place,
     setPlace,
     showRoute,
@@ -220,7 +221,9 @@ function MapViewer({
 
         const routeResult = findShortestRoute(
             routeAnchor.id,
-            place.id
+            place.id,
+            places,
+            edges
         );
 
         if (!routeResult) {
@@ -234,7 +237,13 @@ function MapViewer({
             );
 
         entity.show = true;
-    }, [showRoute, routeAnchor, place]);
+    }, [
+        showRoute,
+        routeAnchor,
+        place,
+        places,
+        edges,
+    ]);
 
     useEffect(() => {
         const viewer = viewerRef.current;

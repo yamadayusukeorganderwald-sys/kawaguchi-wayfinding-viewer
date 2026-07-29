@@ -1,40 +1,85 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "./lib/supabase";
 import Sidebar from "./components/Sidebar";
 import MapViewer from "./components/MapViewer";
-import { useState } from "react";
 import PlaceForm from "./components/PlaceForm";
+import EdgeList from "./components/EdgeList";
+import EdgeForm from "./components/EdgeForm";
+
+const toAppEdge = (edge) => ({
+  id: edge.id,
+  from: edge.from,
+  to: edge.to,
+  distance: edge.distance,
+  walkingTime: edge.walking_time,
+  bidirectional: edge.bidirectional,
+});
+
+const toDatabaseEdge = (edge) => ({
+  id: edge.id,
+  from: edge.from,
+  to: edge.to,
+  distance: edge.distance,
+  walking_time: edge.walkingTime,
+  bidirectional: edge.bidirectional,
+});
 
 function App() {
-
-  useEffect(() => {
-    async function loadPlaces() {
-      const { data, error } = await supabase
-        .from("places")
-        .select("*");
-
-      if (error) {
-        console.error("placesの取得に失敗:", error);
-        return;
-      }
-
-      setPlaceList(data);
-
-      if (data.length > 0) {
-        setPlace(data[0]);
-      }
-    }
-
-    loadPlaces();
-  }, []);
-
   const [placeList, setPlaceList] = useState([]);
   const [place, setPlace] = useState(null);
   const [showRoute, setShowRoute] = useState(false);
   const [routeAnchor, setRouteAnchor] = useState(null);
+
   const [showPlaceForm, setShowPlaceForm] = useState(false);
   const [clickedPosition, setClickedPosition] = useState(null);
   const [editingPlace, setEditingPlace] = useState(null);
+
+  const [edgeList, setEdgeList] = useState([]);
+  const [showEdgeForm, setShowEdgeForm] = useState(false);
+  const [editingEdge, setEditingEdge] = useState(null);
+
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadData() {
+      const [
+        { data: places, error: placesError },
+        { data: edges, error: edgesError },
+      ] = await Promise.all([
+        supabase.from("places").select("*"),
+        supabase.from("edges").select("*"),
+      ]);
+
+      if (placesError) {
+        console.error("placesの取得に失敗:", placesError);
+      } else {
+        const loadedPlaces = places ?? [];
+        setPlaceList(loadedPlaces);
+        setPlace(loadedPlaces[0] ?? null);
+      }
+
+      if (edgesError) {
+        console.error("edgesの取得に失敗:", edgesError);
+      } else {
+        setEdgeList((edges ?? []).map(toAppEdge));
+      }
+
+      setIsLoading(false);
+    }
+
+    loadData();
+  }, []);
+
+  const closePlaceForm = () => {
+    setShowPlaceForm(false);
+    setEditingPlace(null);
+    setClickedPosition(null);
+  };
+
+  const closeEdgeForm = () => {
+    setShowEdgeForm(false);
+    setEditingEdge(null);
+  };
 
   const handleAddPlace = async (newPlace) => {
     const { data, error } = await supabase
@@ -49,14 +94,9 @@ function App() {
       return;
     }
 
-    setPlaceList((currentPlaces) => [
-      ...currentPlaces,
-      data,
-    ]);
-
+    setPlaceList((currentPlaces) => [...currentPlaces, data]);
     setPlace(data);
-    setShowPlaceForm(false);
-    setClickedPosition(null);
+    closePlaceForm();
   };
 
   const handleUpdatePlace = async (updatedPlace) => {
@@ -69,19 +109,21 @@ function App() {
 
     if (error) {
       console.error("地点の更新に失敗:", error);
-      alert("更新できませんでした");
+      alert("地点を更新できませんでした");
       return;
     }
 
     setPlaceList((currentPlaces) =>
-      currentPlaces.map((item) =>
-        item.id === data.id ? data : item
-      )
+      currentPlaces.map((item) => (item.id === data.id ? data : item))
     );
 
     setPlace(data);
-    setShowPlaceForm(false);
-    setEditingPlace(null);
+
+    if (routeAnchor?.id === data.id) {
+      setRouteAnchor(data);
+    }
+
+    closePlaceForm();
   };
 
   const handleDeletePlace = async (targetPlace) => {
@@ -98,7 +140,7 @@ function App() {
 
     if (error) {
       console.error("地点の削除に失敗:", error);
-      alert("削除できませんでした");
+      alert("地点を削除できませんでした");
       return;
     }
 
@@ -117,12 +159,88 @@ function App() {
       setPlace(updatedPlaces[0] ?? null);
     }
 
-    setEditingPlace(null);
-    setShowPlaceForm(false);
+    closePlaceForm();
   };
 
-  if (!place) {
+  const handleAddEdge = async (newEdge) => {
+    const { data, error } = await supabase
+      .from("edges")
+      .insert(toDatabaseEdge(newEdge))
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Edgeの追加に失敗:", error);
+      alert("Edgeを追加できませんでした");
+      return;
+    }
+
+    setEdgeList((currentEdges) => [
+      ...currentEdges,
+      toAppEdge(data),
+    ]);
+
+    closeEdgeForm();
+  };
+
+  const handleUpdateEdge = async (updatedEdge) => {
+    const { data, error } = await supabase
+      .from("edges")
+      .update(toDatabaseEdge(updatedEdge))
+      .eq("id", updatedEdge.id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Edgeの更新に失敗:", error);
+      alert("Edgeを更新できませんでした");
+      return;
+    }
+
+    const savedEdge = toAppEdge(data);
+
+    setEdgeList((currentEdges) =>
+      currentEdges.map((edge) =>
+        edge.id === savedEdge.id ? savedEdge : edge
+      )
+    );
+
+    closeEdgeForm();
+  };
+
+  const handleDeleteEdge = async (targetEdge) => {
+    const confirmed = window.confirm(
+      "このEdgeを削除しますか？"
+    );
+
+    if (!confirmed) return;
+
+    const { error } = await supabase
+      .from("edges")
+      .delete()
+      .eq("id", targetEdge.id);
+
+    if (error) {
+      console.error("Edgeの削除に失敗:", error);
+      alert("Edgeを削除できませんでした");
+      return;
+    }
+
+    setEdgeList((currentEdges) =>
+      currentEdges.filter((edge) => edge.id !== targetEdge.id)
+    );
+
+    if (editingEdge?.id === targetEdge.id) {
+      closeEdgeForm();
+    }
+  };
+
+  if (isLoading) {
     return <div>読み込み中...</div>;
+  }
+
+  if (placeList.length === 0) {
+    return <div>地点データがありません。</div>;
   }
 
   return (
@@ -149,6 +267,7 @@ function App() {
 
       <MapViewer
         places={placeList}
+        edges={edgeList}
         place={place}
         setPlace={setPlace}
         showRoute={showRoute}
@@ -157,16 +276,33 @@ function App() {
         clickedPosition={clickedPosition}
       />
 
+      <EdgeList
+        edges={edgeList}
+        places={placeList}
+        setShowEdgeForm={setShowEdgeForm}
+        setEditingEdge={setEditingEdge}
+        onDeleteEdge={handleDeleteEdge}
+      />
+
       {showPlaceForm && (
         <PlaceForm
           onAddPlace={handleAddPlace}
           onUpdatePlace={handleUpdatePlace}
-          onClose={() => setShowPlaceForm(false)}
+          onClose={closePlaceForm}
           initialPosition={clickedPosition}
           editingPlace={editingPlace}
         />
       )}
 
+      {showEdgeForm && (
+        <EdgeForm
+          places={placeList}
+          editingEdge={editingEdge}
+          onSave={handleAddEdge}
+          onUpdate={handleUpdateEdge}
+          onClose={closeEdgeForm}
+        />
+      )}
     </div>
   );
 }

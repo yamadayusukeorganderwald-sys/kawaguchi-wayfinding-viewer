@@ -1,11 +1,8 @@
-import { places } from "../data/places";
-import { edges } from "../data/edges";
-
-function getPlaceById(id) {
+function getPlaceById(id, places) {
   return places.find((place) => place.id === id);
 }
 
-function getNeighbors(placeId) {
+function getNeighbors(placeId, edges) {
   const neighbors = [];
 
   edges.forEach((edge) => {
@@ -23,13 +20,21 @@ function getNeighbors(placeId) {
       });
     }
   });
+
   return neighbors;
 }
 
-function findShortestRoute(fromId, toId) {
+function findShortestRoute(
+  fromId,
+  toId,
+  places,
+  edges
+) {
   const costs = {};
   const previous = {};
-  const unvisited = new Set(places.map((place) => place.id));
+  const unvisited = new Set(
+    places.map((place) => place.id)
+  );
 
   places.forEach((place) => {
     costs[place.id] = Infinity;
@@ -48,7 +53,10 @@ function findShortestRoute(fromId, toId) {
       }
     });
 
-    if (currentId === null || currentCost === Infinity) {
+    if (
+      currentId === null ||
+      currentCost === Infinity
+    ) {
       break;
     }
 
@@ -58,19 +66,24 @@ function findShortestRoute(fromId, toId) {
 
     unvisited.delete(currentId);
 
-    const neighbors = getNeighbors(currentId);
+    const neighbors = getNeighbors(
+      currentId,
+      edges
+    );
 
-    neighbors.forEach(({ id: neighborId, edge }) => {
-      if (!unvisited.has(neighborId)) return;
+    neighbors.forEach(
+      ({ id: neighborId, edge }) => {
+        if (!unvisited.has(neighborId)) return;
 
-      const newCost =
-        costs[currentId] + edge.walkingTime;
+        const newCost =
+          costs[currentId] + edge.walkingTime;
 
-      if (newCost < costs[neighborId]) {
-        costs[neighborId] = newCost;
-        previous[neighborId] = currentId;
+        if (newCost < costs[neighborId]) {
+          costs[neighborId] = newCost;
+          previous[neighborId] = currentId;
+        }
       }
-    });
+    );
   }
 
   if (costs[toId] === Infinity) {
@@ -95,7 +108,7 @@ function findShortestRoute(fromId, toId) {
   }
 
   const positions = path
-    .map((id) => getPlaceById(id))
+    .map((id) => getPlaceById(id, places))
     .filter(Boolean)
     .map((place) => [
       place.longitude,
