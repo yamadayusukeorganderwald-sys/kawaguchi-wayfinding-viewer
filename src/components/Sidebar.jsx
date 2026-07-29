@@ -243,19 +243,21 @@ function Sidebar({
             </div>
 
             <div>
-                <img
-                    src={place.image}
-                    alt={place.name}
-                    style={{
-                        width: "100%",
-                        height: "140px",
-                        marginTop: "6px",
-                        marginBottom: "6px",
-                        borderRadius: "8px",
-                        objectFit: "cover",
-                        display: "block",
-                    }}
-                />
+                {place.image && (
+                    <img
+                        src={place.image}
+                        alt={place.name}
+                        style={{
+                            width: "100%",
+                            height: "140px",
+                            marginTop: "6px",
+                            marginBottom: "6px",
+                            borderRadius: "8px",
+                            objectFit: "cover",
+                            display: "block",
+                        }}
+                    />
+                )}
                 <section
                     style={{
                         marginBottom: "3px",

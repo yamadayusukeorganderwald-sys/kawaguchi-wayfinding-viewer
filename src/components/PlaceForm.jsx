@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { supabase } from "../lib/supabase";
 
 function PlaceForm({
     onAddPlace,
@@ -48,7 +49,9 @@ function PlaceForm({
         editingPlace?.proposal ?? ""
     );
 
-    const handleSubmit = (event) => {
+    const [imageFile, setImageFile] = useState(null);
+
+    const handleSubmit = async (event) => {
         event.preventDefault();
 
         const longitudeNumber = Number(longitude);
@@ -62,6 +65,29 @@ function PlaceForm({
             return;
         }
 
+        let imageUrl = editingPlace?.image ?? "";
+
+        if (imageFile) {
+            const extension = imageFile.name.split(".").pop();
+            const fileName = `${Date.now()}-${crypto.randomUUID()}.${extension}`;
+
+            const { error: uploadError } = await supabase.storage
+                .from("place-images")
+                .upload(fileName, imageFile);
+
+            if (uploadError) {
+                console.error("画像アップロード失敗:", uploadError);
+                alert("画像をアップロードできませんでした");
+                return;
+            }
+
+            const { data: publicUrlData } = supabase.storage
+                .from("place-images")
+                .getPublicUrl(fileName);
+
+            imageUrl = publicUrlData.publicUrl;
+        }
+
         const submittedPlace = {
             id: editingPlace
                 ? editingPlace.id
@@ -73,16 +99,16 @@ function PlaceForm({
             latitude: latitudeNumber,
             height: editingPlace?.height ?? 500,
             description: description.trim(),
-            image: editingPlace?.image ?? "",
+            image: imageUrl,
             observation: observation.trim(),
             problem: problem.trim(),
             proposal: proposal.trim(),
         };
 
         if (editingPlace) {
-            onUpdatePlace(submittedPlace);
+            await onUpdatePlace(submittedPlace);
         } else {
-            onAddPlace(submittedPlace);
+            await onAddPlace(submittedPlace);
         }
 
         onClose();
@@ -253,6 +279,18 @@ function PlaceForm({
                         marginBottom: "16px",
                         boxSizing: "border-box",
                         resize: "vertical",
+                    }}
+                />
+
+                <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(event) =>
+                        setImageFile(event.target.files[0] ?? null)
+                    }
+                    style={{
+                        width: "100%",
+                        marginBottom: "16px",
                     }}
                 />
 

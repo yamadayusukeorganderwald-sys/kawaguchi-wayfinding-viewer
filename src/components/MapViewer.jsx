@@ -10,11 +10,13 @@ function MapViewer({
     showRoute,
     routeAnchor,
     onMapClick,
+    clickedPosition,
 }) {
     const cesiumContainer = useRef(null);
     const viewerRef = useRef(null);
     const entitiesRef = useRef([]);
     const routeEntitiesRef = useRef([]);
+    const clickedMarkerRef = useRef(null);
 
     useEffect(() => {
         const viewer = new Cesium.Viewer(cesiumContainer.current, {
@@ -233,6 +235,101 @@ function MapViewer({
 
         entity.show = true;
     }, [showRoute, routeAnchor, place]);
+
+    useEffect(() => {
+        const viewer = viewerRef.current;
+
+        if (!viewer || viewer.isDestroyed()) return;
+        if (!clickedPosition) return;
+
+        // 前のクリック演出が残っていたら削除
+        if (clickedMarkerRef.current) {
+            viewer.entities.remove(clickedMarkerRef.current);
+            clickedMarkerRef.current = null;
+        }
+
+        const startTime = performance.now();
+        const duration = 900;
+
+        const clickEffect = viewer.entities.add({
+            position: Cesium.Cartesian3.fromDegrees(
+                clickedPosition.longitude,
+                clickedPosition.latitude,
+                clickedPosition.height + 2
+            ),
+
+            label: {
+                text: "＋",
+                font: "bold 30px sans-serif",
+                horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
+                verticalOrigin: Cesium.VerticalOrigin.CENTER,
+                fillColor: Cesium.Color.WHITE,
+                outlineColor: Cesium.Color.BLACK,
+                outlineWidth: 1,
+                style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+                disableDepthTestDistance: Number.POSITIVE_INFINITY,
+            },
+        });
+
+        clickedMarkerRef.current = clickEffect;
+
+        let animationFrameId;
+
+        const animate = (currentTime) => {
+            if (
+                !viewerRef.current ||
+                viewerRef.current.isDestroyed() ||
+                !clickEffect.label
+            ) {
+                return;
+            }
+
+            const progress = Math.min(
+                (currentTime - startTime) / duration,
+                1
+            );
+
+            // 少し大きくなる
+            clickEffect.label.scale = 0.7 + progress * 0.8;
+
+            // 徐々に透明になる
+            const alpha = 1 - progress;
+
+            clickEffect.label.fillColor =
+                Cesium.Color.YELLOW.withAlpha(alpha);
+
+            clickEffect.label.outlineColor =
+                Cesium.Color.BLACK.withAlpha(alpha);
+
+            if (progress < 1) {
+                animationFrameId = requestAnimationFrame(animate);
+            } else {
+                viewer.entities.remove(clickEffect);
+
+                if (clickedMarkerRef.current === clickEffect) {
+                    clickedMarkerRef.current = null;
+                }
+            }
+        };
+
+        animationFrameId = requestAnimationFrame(animate);
+
+        return () => {
+            cancelAnimationFrame(animationFrameId);
+
+            if (
+                clickedMarkerRef.current &&
+                viewerRef.current &&
+                !viewerRef.current.isDestroyed()
+            ) {
+                viewerRef.current.entities.remove(
+                    clickedMarkerRef.current
+                );
+
+                clickedMarkerRef.current = null;
+            }
+        };
+    }, [clickedPosition]);
 
     return (
         <div
