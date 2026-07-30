@@ -48,50 +48,52 @@ function Sidebar({
                 <br />
                 Wayfinding Viewer
             </h1>
+            {!isMobile && (
+                <>
+                    <p
+                        style={{
+                            fontSize: "13px",
+                            lineHeight: "1.5",
+                            marginBottom: "12px",
+                        }}
+                    >
+                        現地調査をもとに<br />
+                        歩行動線を可視化する試作です。
+                    </p>
 
-            <p
-                style={{
-                    fontSize: "13px",
-                    lineHeight: "1.5",
-                    marginBottom: "20px",
-                }}
-            >
-                現地調査をもとに<br />
-                歩行動線を可視化する試作です。
-            </p>
-
-            <div
-                style={{
-                    display: "flex",
-                    gap: "6px",
-                    marginBottom: "5px",
-                }}
-            >
-                {places
-                    .filter((item) => item.type === "route")
-                    .map((item) => (
-                        <button
-                            key={item.id}
-                            onClick={() => {
-                                setPlace(item);
-                                setSelectedEdge(null);
-                            }}
-                            style={{
-                                flex: 1,
-                                padding: "6px 4px",
-                                fontSize: "13px",
-                                border: "1px solid #ccc",
-                                borderRadius: "4px",
-                                backgroundColor: item.id === place.id ? "#222" : "#fff",
-                                color: item.id === place.id ? "#fff" : "#222",
-                                whiteSpace: "nowrap",
-                            }}
-                        >
-                            {item.name}
-                        </button>
-                    ))}
-            </div>
-
+                    <div
+                        style={{
+                            display: "flex",
+                            gap: "6px",
+                            marginBottom: "5px",
+                        }}
+                    >
+                        {places
+                            .filter((item) => item.type === "route")
+                            .map((item) => (
+                                <button
+                                    key={item.id}
+                                    onClick={() => {
+                                        setPlace(item);
+                                        setSelectedEdge(null);
+                                    }}
+                                    style={{
+                                        flex: 1,
+                                        padding: "6px 4px",
+                                        fontSize: "13px",
+                                        border: "1px solid #ccc",
+                                        borderRadius: "4px",
+                                        backgroundColor: item.id === place.id ? "#222" : "#fff",
+                                        color: item.id === place.id ? "#fff" : "#222",
+                                        whiteSpace: "nowrap",
+                                    }}
+                                >
+                                    {item.name}
+                                </button>
+                            ))}
+                    </div>
+                </>
+            )}
             {selectedEdge ? (
 
                 <>
