@@ -308,7 +308,7 @@ function App() {
       <div
         style={{
           width: isMobile ? "60%" : "280px",
-          height: "100%",
+          height: isMobile ? "auto" : "100%",
           position: isMobile ? "absolute" : "relative",
           left: 0,
           top: 0,
