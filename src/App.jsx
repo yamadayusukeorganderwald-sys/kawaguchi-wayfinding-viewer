@@ -42,6 +42,7 @@ function App() {
   const [edgeList, setEdgeList] = useState([]);
   const [showEdgeForm, setShowEdgeForm] = useState(false);
   const [editingEdge, setEditingEdge] = useState(null);
+  const [selectedEdge, setSelectedEdge] = useState(null);
   const [initialEdge, setInitialEdge] = useState(null);
 
   const [isLoading, setIsLoading] = useState(true);
@@ -121,6 +122,10 @@ function App() {
     }
 
     setShowEdgeForm(true);
+  };
+
+  const handleEdgeClick = (edge) => {
+    setSelectedEdge(edge);
   };
 
   const handleAddPlace = async (newPlace) => {
@@ -305,19 +310,33 @@ function App() {
         setShowPlaceForm={setShowPlaceForm}
         setEditingPlace={setEditingPlace}
         onDeletePlace={handleDeletePlace}
+
+        selectedEdge={selectedEdge}
+        setSelectedEdge={setSelectedEdge}
+        onEditEdge={(edge) => {
+          setEditingEdge(edge);
+          setInitialEdge(null);
+          setShowEdgeForm(true);
+        }}
+        onDeleteEdge={handleDeleteEdge}
       />
 
       <MapViewer
         places={placeList}
         edges={edgeList}
         place={place}
-        setPlace={setPlace}
+        setPlace={(selectedPlace) => {
+          setPlace(selectedPlace);
+          setSelectedEdge(null);
+        }}
         showRoute={showRoute}
         setShowRoute={setShowRoute}
         routeAnchor={routeAnchor}
         setRouteAnchor={setRouteAnchor}
         onMapClick={setClickedPosition}
         clickedPosition={clickedPosition}
+        onEdgeClick={handleEdgeClick}
+        selectedEdge={selectedEdge}
       />
 
       <EdgeList

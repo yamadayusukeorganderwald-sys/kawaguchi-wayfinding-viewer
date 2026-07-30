@@ -46,10 +46,13 @@ function MapViewer({
     setRouteAnchor,
     onMapClick,
     clickedPosition,
+    onEdgeClick,
+    selectedEdge,
 }) {
     const cesiumContainer = useRef(null);
     const viewerRef = useRef(null);
     const entitiesRef = useRef([]);
+    const edgeEntitiesRef = useRef([]);
     const routeEntitiesRef = useRef([]);
     const clickedMarkerRef = useRef(null);
     const currentPlaceRef = useRef(place);
@@ -125,6 +128,15 @@ function MapViewer({
                 return;
             }
 
+            // Edgeをクリック
+            if (picked && picked.id && picked.id.edge) {
+                if (onEdgeClick) {
+                    onEdgeClick(picked.id.edge);
+                }
+
+                return;
+            }
+
             // 地図上のクリック位置を3D座標として取得
             let cartesian = viewer.scene.pickPosition(click.position);
 
@@ -185,8 +197,6 @@ function MapViewer({
             Cesium.KeyboardEventModifier.SHIFT
         );
 
-        routeEntitiesRef.current.push(routeEntity);
-
         const resizeTimer = setTimeout(() => {
             if (!viewer.isDestroyed()) {
                 viewer.resize();
@@ -206,6 +216,7 @@ function MapViewer({
 
             viewerRef.current = null;
             entitiesRef.current = [];
+            edgeEntitiesRef.current = [];
             routeEntitiesRef.current = [];
         };
 
@@ -289,6 +300,85 @@ function MapViewer({
             entitiesRef.current.push(entity);
         });
     }, [places]);
+
+    useEffect(() => {
+        const viewer = viewerRef.current;
+
+        if (!viewer || viewer.isDestroyed()) return;
+
+        edgeEntitiesRef.current.forEach((entity) => {
+            viewer.entities.remove(entity);
+        });
+
+        edgeEntitiesRef.current = [];
+
+        edges.forEach((edge) => {
+
+            const fromPlace = places.find(
+                (place) => place.id === edge.from
+            );
+
+            const toPlace = places.find(
+                (place) => place.id === edge.to
+            );
+
+            if (!fromPlace || !toPlace) return;
+
+            const isSelected = selectedEdge?.id === edge.id;
+
+            const entity = viewer.entities.add({
+                polyline: {
+                    positions: [
+                        Cesium.Cartesian3.fromDegrees(
+                            fromPlace.longitude,
+                            fromPlace.latitude,
+                            getLevelHeight(fromPlace.level)
+                        ),
+                        Cesium.Cartesian3.fromDegrees(
+                            toPlace.longitude,
+                            toPlace.latitude,
+                            getLevelHeight(toPlace.level)
+                        ),
+                    ],
+
+                    material: isSelected
+                        ? Cesium.Color.CYAN.withAlpha(1)
+                        : Cesium.Color.WHITE.withAlpha(0.75),
+
+                    width: isSelected ? 8 : 4,
+                    clampToGround: false,
+                },
+            });
+
+            entity.edge = edge;
+            edgeEntitiesRef.current.push(entity);
+
+            const hitEntity = viewer.entities.add({
+                polyline: {
+                    positions: [
+                        Cesium.Cartesian3.fromDegrees(
+                            fromPlace.longitude,
+                            fromPlace.latitude,
+                            getLevelHeight(fromPlace.level)
+                        ),
+                        Cesium.Cartesian3.fromDegrees(
+                            toPlace.longitude,
+                            toPlace.latitude,
+                            getLevelHeight(toPlace.level)
+                        ),
+                    ],
+
+                    material: Cesium.Color.WHITE.withAlpha(0.01),
+                    width: 18,
+                    clampToGround: false,
+                },
+            });
+
+            hitEntity.edge = edge;
+            edgeEntitiesRef.current.push(hitEntity);
+        });
+
+    }, [edges, places, selectedEdge]);
 
     useEffect(() => {
         const viewer = viewerRef.current;
@@ -379,6 +469,12 @@ function MapViewer({
         }
 
         routeResult.edges.forEach((routeEdge, index) => {
+
+            const isSelectedEdge =
+                selectedEdge?.id === routeEdge.id;
+
+            if (isSelectedEdge) return;
+
             const fromPlace = places.find(
                 (item) => item.id === routeResult.path[index]
             );
@@ -408,11 +504,10 @@ function MapViewer({
                         routeEdge.movement_type
                     ).withAlpha(0.9),
 
-                    width: 8,
+                    width: 9,
                     clampToGround: false,
                 },
             });
-
             routeEntitiesRef.current.push(routeEntity);
         });
     }, [
@@ -421,6 +516,7 @@ function MapViewer({
         place,
         places,
         edges,
+        selectedEdge,
     ]);
 
     useEffect(() => {

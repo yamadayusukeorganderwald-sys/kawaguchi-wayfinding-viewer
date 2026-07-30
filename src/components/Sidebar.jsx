@@ -18,6 +18,11 @@ function Sidebar({
     setShowPlaceForm,
     setEditingPlace,
     onDeletePlace,
+
+    selectedEdge,
+    setSelectedEdge,
+    onEditEdge,
+    onDeleteEdge,
 }) {
     return (
         <div
@@ -66,7 +71,10 @@ function Sidebar({
                     .map((item) => (
                         <button
                             key={item.id}
-                            onClick={() => setPlace(item)}
+                            onClick={() => {
+                                setPlace(item);
+                                setSelectedEdge(null);
+                            }}
                             style={{
                                 flex: 1,
                                 padding: "6px 4px",
@@ -83,165 +91,276 @@ function Sidebar({
                     ))}
             </div>
 
-            <h2
-                style={{
-                    fontSize: "18px",
-                    margin: "14px 0 6px",
-                }}
-            >
-                {place.name}
-            </h2>
+            {selectedEdge ? (
 
-            <div
-                style={{
-                    fontSize: "11px",
-                    color: "#666",
-                    marginBottom: "6px",
-                }}
-            >
-                {place.type === "route" && "目的地点"}
-                {place.type === "junction" && "ルート設定用ポイント"}
-                {place.type === "observation" && "観察地点"}
-            </div>
+                <>
+                    <h2
+                        style={{
+                            fontSize: "18px",
+                            margin: "14px 0 6px",
+                        }}
+                    >
+                        Edge
+                    </h2>
 
-            {place.place_type?.length > 0 && (
-                <div
-                    style={{
-                        display: "flex",
-                        flexWrap: "wrap",
-                        gap: "6px",
-                        marginBottom: "12px",
-                    }}
-                >
-                    {place.place_type.map((type) => (
-                        <span
-                            key={type}
+                    <div
+                        style={{
+                            fontSize: "11px",
+                            color: "#666",
+                            marginBottom: "12px",
+                        }}
+                    >
+                        歩行経路
+                    </div>
+
+                    <div
+                        style={{
+                            display: "flex",
+                            gap: "8px",
+                            marginBottom: "16px",
+                        }}
+                    >
+                        <button onClick={() => onEditEdge(selectedEdge)}>
+                            編集
+                        </button>
+
+                        <button onClick={() => onDeleteEdge(selectedEdge)}>
+                            削除
+                        </button>
+                    </div>
+
+                    <section style={{ marginBottom: "12px" }}>
+                        <h3 style={{ fontSize: "12px", margin: "0 0 4px" }}>
+                            始点
+                        </h3>
+
+                        <p style={{ margin: 0, fontSize: "12px" }}>
+                            {places.find(
+                                (item) => item.id === selectedEdge.from
+                            )?.name}
+                        </p>
+                    </section>
+
+                    <section style={{ marginBottom: "12px" }}>
+                        <h3 style={{ fontSize: "12px", margin: "0 0 4px" }}>
+                            終点
+                        </h3>
+
+                        <p style={{ margin: 0, fontSize: "12px" }}>
+                            {places.find(
+                                (item) => item.id === selectedEdge.to
+                            )?.name}
+                        </p>
+                    </section>
+
+                    <section style={{ marginBottom: "12px" }}>
+                        <h3 style={{ fontSize: "12px", margin: "0 0 4px" }}>
+                            距離
+                        </h3>
+
+                        <p style={{ margin: 0, fontSize: "12px" }}>
+                            {selectedEdge.distance} m
+                        </p>
+                    </section>
+
+                    <section style={{ marginBottom: "12px" }}>
+                        <h3 style={{ fontSize: "12px", margin: "0 0 4px" }}>
+                            徒歩時間
+                        </h3>
+
+                        <p style={{ margin: 0, fontSize: "12px" }}>
+                            {selectedEdge.walkingTime} 秒
+                        </p>
+                    </section>
+
+                    <section style={{ marginBottom: "12px" }}>
+                        <h3 style={{ fontSize: "12px", margin: "0 0 4px" }}>
+                            移動方法
+                        </h3>
+
+                        <p style={{ margin: 0, fontSize: "12px" }}>
+                            {selectedEdge.movement_type}
+                        </p>
+                    </section>
+
+                    <section style={{ marginBottom: "12px" }}>
+                        <h3 style={{ fontSize: "12px", margin: "0 0 4px" }}>
+                            道路空間との関係
+                        </h3>
+
+                        <p style={{ margin: 0, fontSize: "12px" }}>
+                            {selectedEdge.road_context}
+                        </p>
+                    </section>
+                </>
+
+            ) : (
+
+                <>
+
+                    <h2
+                        style={{
+                            fontSize: "18px",
+                            margin: "14px 0 6px",
+                        }}
+                    >
+                        {place.name}
+                    </h2>
+
+                    <div
+                        style={{
+                            fontSize: "11px",
+                            color: "#666",
+                            marginBottom: "6px",
+                        }}
+                    >
+                        {place.type === "route" && "目的地点"}
+                        {place.type === "junction" && "ルート設定用ポイント"}
+                        {place.type === "observation" && "観察地点"}
+                    </div>
+
+                    {place.place_type?.length > 0 && (
+                        <div
                             style={{
-                                padding: "3px 7px",
-                                border: "1px solid #bbb",
-                                borderRadius: "999px",
-                                background: "#fff",
-                                fontSize: "11px",
+                                display: "flex",
+                                flexWrap: "wrap",
+                                gap: "6px",
+                                marginBottom: "12px",
                             }}
                         >
-                            {PLACE_TYPE_LABELS[type] ?? type}
-                        </span>
-                    ))}
-                </div>
-            )}
+                            {place.place_type.map((type) => (
+                                <span
+                                    key={type}
+                                    style={{
+                                        padding: "3px 7px",
+                                        border: "1px solid #bbb",
+                                        borderRadius: "999px",
+                                        background: "#fff",
+                                        fontSize: "11px",
+                                    }}
+                                >
+                                    {PLACE_TYPE_LABELS[type] ?? type}
+                                </span>
+                            ))}
+                        </div>
+                    )}
 
-            <div
-                style={{
-                    display: "flex",
-                    gap: "8px",
-                    marginBottom: "16px",
-                }}
-            >
-                <button
-                    onClick={() => {
-                        setEditingPlace(place);
-                        setShowPlaceForm(true);
-                    }}
-                >
-                    編集
-                </button>
-
-                <button
-                    onClick={() => onDeletePlace(place)}
-                >
-                    削除
-                </button>
-            </div>
-
-            <div>
-                {place.image && (
-                    <img
-                        src={place.image}
-                        alt={place.name}
+                    <div
                         style={{
-                            width: "100%",
-                            height: "140px",
-                            marginTop: "6px",
-                            marginBottom: "6px",
-                            borderRadius: "8px",
-                            objectFit: "cover",
-                            display: "block",
-                        }}
-                    />
-                )}
-                <section
-                    style={{
-                        marginBottom: "3px",
-                    }}
-                >
-                    <h3
-                        style={{
-                            fontSize: "12px",
-                            margin: "0 0 3px",
+                            display: "flex",
+                            gap: "8px",
+                            marginBottom: "16px",
                         }}
                     >
-                        観察
-                    </h3>
+                        <button
+                            onClick={() => {
+                                setEditingPlace(place);
+                                setShowPlaceForm(true);
+                            }}
+                        >
+                            編集
+                        </button>
 
-                    <p
-                        style={{
-                            margin: 0,
-                            fontSize: "10px",
-                        }}
-                    >
-                        {place.observation}
-                    </p>
-                </section>
+                        <button
+                            onClick={() => onDeletePlace(place)}
+                        >
+                            削除
+                        </button>
+                    </div>
 
-                <section
-                    style={{
-                        marginBottom: "3px",
-                    }}
-                >
-                    <h3
-                        style={{
-                            fontSize: "12px",
-                            margin: "0 0 3px",
-                        }}
-                    >
-                        課題
-                    </h3>
+                    <div>
+                        {place.image && (
+                            <img
+                                src={place.image}
+                                alt={place.name}
+                                style={{
+                                    width: "100%",
+                                    height: "140px",
+                                    marginTop: "6px",
+                                    marginBottom: "6px",
+                                    borderRadius: "8px",
+                                    objectFit: "cover",
+                                    display: "block",
+                                }}
+                            />
+                        )}
+                        <section
+                            style={{
+                                marginBottom: "3px",
+                            }}
+                        >
+                            <h3
+                                style={{
+                                    fontSize: "12px",
+                                    margin: "0 0 3px",
+                                }}
+                            >
+                                観察
+                            </h3>
 
-                    <p
-                        style={{
-                            margin: 0,
-                            fontSize: "10px",
-                        }}
-                    >
-                        {place.problem}
-                    </p>
-                </section>
+                            <p
+                                style={{
+                                    margin: 0,
+                                    fontSize: "10px",
+                                }}
+                            >
+                                {place.observation}
+                            </p>
+                        </section>
 
-                <section
-                    style={{
-                        marginBottom: "3px",
-                    }}
-                >
-                    <h3
-                        style={{
-                            fontSize: "12px",
-                            margin: "0 0 3px",
-                        }}
-                    >
-                        改善案
-                    </h3>
+                        <section
+                            style={{
+                                marginBottom: "3px",
+                            }}
+                        >
+                            <h3
+                                style={{
+                                    fontSize: "12px",
+                                    margin: "0 0 3px",
+                                }}
+                            >
+                                課題
+                            </h3>
 
-                    <p
-                        style={{
-                            margin: 0,
-                            fontSize: "10px",
-                        }}
-                    >
-                        {place.proposal}
-                    </p>
-                </section>
-            </div>
-        </div>
+                            <p
+                                style={{
+                                    margin: 0,
+                                    fontSize: "10px",
+                                }}
+                            >
+                                {place.problem}
+                            </p>
+                        </section>
+
+                        <section
+                            style={{
+                                marginBottom: "3px",
+                            }}
+                        >
+                            <h3
+                                style={{
+                                    fontSize: "12px",
+                                    margin: "0 0 3px",
+                                }}
+                            >
+                                改善案
+                            </h3>
+
+                            <p
+                                style={{
+                                    margin: 0,
+                                    fontSize: "10px",
+                                }}
+                            >
+                                {place.proposal}
+                            </p>
+                        </section>
+                    </div>
+                </>
+
+            )
+            }
+        </div >
     );
 }
 
