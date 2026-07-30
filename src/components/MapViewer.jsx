@@ -621,7 +621,7 @@ function MapViewer({
             style={{
                 flex: 1,
                 minWidth: 0,
-                height: isMobile ? "60%" : "100dvh",
+                height: "100%",
                 position: "relative",
             }}
         />
