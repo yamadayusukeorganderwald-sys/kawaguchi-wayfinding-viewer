@@ -303,28 +303,34 @@ function App() {
         fontFamily: "sans-serif",
       }}
     >
-      <Sidebar
-        place={place}
-        setPlace={setPlace}
-        routeAnchor={routeAnchor}
-        setRouteAnchor={setRouteAnchor}
-        showRoute={showRoute}
-        setShowRoute={setShowRoute}
-        places={placeList}
-        setShowPlaceForm={setShowPlaceForm}
-        setEditingPlace={setEditingPlace}
-        onDeletePlace={handleDeletePlace}
-        isMobile={isMobile}
-
-        selectedEdge={selectedEdge}
-        setSelectedEdge={setSelectedEdge}
-        onEditEdge={(edge) => {
-          setEditingEdge(edge);
-          setInitialEdge(null);
-          setShowEdgeForm(true);
+      <div
+        style={{
+          width: isMobile ? "60%" : "280px",
         }}
-        onDeleteEdge={handleDeleteEdge}
-      />
+      >
+        <Sidebar
+          place={place}
+          setPlace={setPlace}
+          routeAnchor={routeAnchor}
+          setRouteAnchor={setRouteAnchor}
+          showRoute={showRoute}
+          setShowRoute={setShowRoute}
+          places={placeList}
+          setShowPlaceForm={setShowPlaceForm}
+          setEditingPlace={setEditingPlace}
+          onDeletePlace={handleDeletePlace}
+          isMobile={isMobile}
+
+          selectedEdge={selectedEdge}
+          setSelectedEdge={setSelectedEdge}
+          onEditEdge={(edge) => {
+            setEditingEdge(edge);
+            setInitialEdge(null);
+            setShowEdgeForm(true);
+          }}
+          onDeleteEdge={handleDeleteEdge}
+        />
+      </div>
 
       <MapViewer
         places={placeList}
