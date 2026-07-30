@@ -23,12 +23,13 @@ function Sidebar({
     setSelectedEdge,
     onEditEdge,
     onDeleteEdge,
+    isMobile,
 }) {
     return (
         <div
             style={{
-                width: "280px",
-                height: "100vh",
+                width: isMobile ? "100%" : "280px",
+                height: isMobile ? "40%" : "100dvh",
                 padding: "20px",
                 boxSizing: "border-box",
                 backgroundColor: "#f4f4f4",

@@ -48,6 +48,7 @@ function MapViewer({
     clickedPosition,
     onEdgeClick,
     selectedEdge,
+    isMobile,
 }) {
     const cesiumContainer = useRef(null);
     const viewerRef = useRef(null);
@@ -620,7 +621,7 @@ function MapViewer({
             style={{
                 flex: 1,
                 minWidth: 0,
-                height: "100vh",
+                height: isMobile ? "60%" : "100dvh",
                 position: "relative",
             }}
         />

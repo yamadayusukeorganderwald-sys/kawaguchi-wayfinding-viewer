@@ -7,6 +7,7 @@ import EdgeList from "./components/EdgeList";
 import EdgeForm from "./components/EdgeForm";
 
 
+
 const toAppEdge = (edge) => ({
   id: edge.id,
   from: edge.from,
@@ -44,6 +45,8 @@ function App() {
   const [editingEdge, setEditingEdge] = useState(null);
   const [selectedEdge, setSelectedEdge] = useState(null);
   const [initialEdge, setInitialEdge] = useState(null);
+
+  const isMobile = window.innerWidth < 768;
 
   const [isLoading, setIsLoading] = useState(true);
 
@@ -294,8 +297,9 @@ function App() {
     <div
       style={{
         display: "flex",
+        flexDirection: isMobile ? "column" : "row",
         width: "100vw",
-        height: "100vh",
+        height: "100dvh",
         fontFamily: "sans-serif",
       }}
     >
@@ -310,6 +314,7 @@ function App() {
         setShowPlaceForm={setShowPlaceForm}
         setEditingPlace={setEditingPlace}
         onDeletePlace={handleDeletePlace}
+        isMobile={isMobile}
 
         selectedEdge={selectedEdge}
         setSelectedEdge={setSelectedEdge}
@@ -337,6 +342,7 @@ function App() {
         clickedPosition={clickedPosition}
         onEdgeClick={handleEdgeClick}
         selectedEdge={selectedEdge}
+        isMobile={isMobile}
       />
 
       <EdgeList
