@@ -29,8 +29,8 @@ function Sidebar({
         <div
             style={{
                 width: isMobile ? "100%" : "280px",
-                height: isMobile ? "40%" : "100dvh",
-                padding: "20px",
+                height: isMobile ? "28%" : "100dvh",
+                padding: isMobile ? "12px" : "20px",
                 boxSizing: "border-box",
                 backgroundColor: "#f4f4f4",
                 overflowY: "auto",
@@ -40,7 +40,7 @@ function Sidebar({
         >
             <h1
                 style={{
-                    fontSize: "28px",
+                    fontSize: isMobile ? "18px" : "28px",
                     marginBottom: "16px",
                 }}
             >
@@ -276,7 +276,7 @@ function Sidebar({
                                 alt={place.name}
                                 style={{
                                     width: "100%",
-                                    height: "140px",
+                                    height: isMobile ? "80px" : "140px",
                                     marginTop: "6px",
                                     marginBottom: "6px",
                                     borderRadius: "8px",
