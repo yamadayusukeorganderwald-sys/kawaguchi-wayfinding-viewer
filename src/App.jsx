@@ -373,6 +373,7 @@ function App() {
         setRouteAnchor={setRouteAnchor}
         showRoute={showRoute}
         setShowRoute={setShowRoute}
+        isMobile={isMobile}
       />
 
       {showPlaceForm && (

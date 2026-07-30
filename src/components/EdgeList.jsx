@@ -1,20 +1,21 @@
 import { useState } from "react";
 
 function EdgeList({
-  edges,
-  places,
-  setShowEdgeForm,
-  setEditingEdge,
-  onOpenEdgeForm,
-  onDeleteEdge,
-  setShowPlaceForm,
-  setEditingPlace,
+    edges,
+    places,
+    setShowEdgeForm,
+    setEditingEdge,
+    onOpenEdgeForm,
+    onDeleteEdge,
+    setShowPlaceForm,
+    setEditingPlace,
+    isMobile,
 
-  place,
-  routeAnchor,
-  setRouteAnchor,
-  showRoute,
-  setShowRoute,
+    place,
+    routeAnchor,
+    setRouteAnchor,
+    showRoute,
+    setShowRoute,
 }) {
     const [isOpen, setIsOpen] = useState(false);
 
@@ -30,15 +31,15 @@ function EdgeList({
         <div
             style={{
                 position: "absolute",
-                top: "16px",
-                right: "16px",
-                width: "200px",
+                top: isMobile ? "12px" : "16px",
+                right: isMobile ? "12px" : "16px",
+                width: isMobile ? "45%" : "200px",
                 maxHeight: "70vh",
                 overflowY: "auto",
-                padding: "16px",
-                backgroundColor: "rgba(255, 255, 255, 0.95)",
+                padding: isMobile ? "10px" : "16px",
+                backgroundColor: "rgba(255,255,255,.95)",
                 borderRadius: "8px",
-                zIndex: 10,
+                zIndex: 20,
             }}
         >
             <button

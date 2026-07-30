@@ -29,7 +29,7 @@ function Sidebar({
         <div
             style={{
                 width: "100%",
-                height: "100%",
+                height: isMobile ? "40%" : "100dvh",
                 padding: isMobile ? "12px" : "20px",
                 boxSizing: "border-box",
                 backgroundColor: "#f4f4f4",
