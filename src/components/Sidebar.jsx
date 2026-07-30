@@ -28,8 +28,8 @@ function Sidebar({
     return (
         <div
             style={{
-                width: isMobile ? "100%" : "280px",
-                height: isMobile ? "40%" : "100dvh",
+                width: "100%",
+                height: "100%",
                 padding: isMobile ? "12px" : "20px",
                 boxSizing: "border-box",
                 backgroundColor: "#f4f4f4",

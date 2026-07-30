@@ -297,15 +297,22 @@ function App() {
     <div
       style={{
         display: "flex",
-        flexDirection: isMobile ? "column" : "row",
+        flexDirection: "row",
         width: "100vw",
         height: "100dvh",
         fontFamily: "sans-serif",
+        position: "relative",
+        overflow: "hidden",
       }}
     >
       <div
         style={{
           width: isMobile ? "60%" : "280px",
+          height: "100%",
+          position: isMobile ? "absolute" : "relative",
+          left: 0,
+          top: 0,
+          zIndex: 10,
         }}
       >
         <Sidebar
