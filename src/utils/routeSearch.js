@@ -32,6 +32,7 @@ function findShortestRoute(
 ) {
   const costs = {};
   const previous = {};
+  const previousEdge = {};
   const unvisited = new Set(
     places.map((place) => place.id)
   );
@@ -81,6 +82,7 @@ function findShortestRoute(
         if (newCost < costs[neighborId]) {
           costs[neighborId] = newCost;
           previous[neighborId] = currentId;
+          previousEdge[neighborId] = edge;
         }
       }
     );
@@ -91,6 +93,7 @@ function findShortestRoute(
   }
 
   const path = [];
+  const routeEdges = [];
   let currentId = toId;
 
   while (currentId) {
@@ -98,6 +101,12 @@ function findShortestRoute(
 
     if (currentId === fromId) {
       break;
+    }
+
+    const edge = previousEdge[currentId];
+
+    if (edge) {
+      routeEdges.unshift(edge);
     }
 
     currentId = previous[currentId];
@@ -118,6 +127,7 @@ function findShortestRoute(
   return {
     path,
     positions,
+    edges: routeEdges,
     totalWalkingTime: costs[toId],
   };
 }

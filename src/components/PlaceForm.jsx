@@ -1,6 +1,15 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
 
+const PLACE_TYPE_OPTIONS = [
+    { value: "station", label: "駅" },
+    { value: "shop", label: "店舗" },
+    { value: "entrance", label: "入口" },
+    { value: "landmark", label: "ランドマーク" },
+    { value: "plaza", label: "広場" },
+    { value: "crossing", label: "横断地点" },
+];
+
 function PlaceForm({
     onAddPlace,
     onUpdatePlace,
@@ -15,6 +24,14 @@ function PlaceForm({
 
     const [type, setType] = useState(
         editingPlace?.type ?? "observation"
+    );
+
+    const [placeTypes, setPlaceTypes] = useState(
+        editingPlace?.place_type ?? []
+    );
+
+    const [level, setLevel] = useState(
+        editingPlace?.level ?? 0
     );
 
     const [longitude, setLongitude] = useState(
@@ -33,10 +50,6 @@ function PlaceForm({
                 : ""
     );
 
-    const [description, setDescription] = useState(
-        editingPlace?.description ?? ""
-    );
-
     const [observation, setObservation] = useState(
         editingPlace?.observation ?? ""
     );
@@ -50,6 +63,16 @@ function PlaceForm({
     );
 
     const [imageFile, setImageFile] = useState(null);
+
+    const handlePlaceTypeChange = (value) => {
+        setPlaceTypes((currentTypes) => {
+            if (currentTypes.includes(value)) {
+                return currentTypes.filter((type) => type !== value);
+            }
+
+            return [...currentTypes, value];
+        });
+    };
 
     const handleSubmit = async (event) => {
         event.preventDefault();
@@ -95,10 +118,11 @@ function PlaceForm({
 
             name: name.trim(),
             type,
+            place_type: placeTypes,
+            level,
             longitude: longitudeNumber,
             latitude: latitudeNumber,
             height: editingPlace?.height ?? 500,
-            description: description.trim(),
             image: imageUrl,
             observation: observation.trim(),
             problem: problem.trim(),
@@ -195,7 +219,72 @@ function PlaceForm({
                     }}
                 >
                     <option value="observation">観察地点</option>
-                    <option value="route">ルート地点</option>
+                    <option value="route">目的地点</option>
+                    <option value="junction">ルート設定用ポイント</option>
+                </select>
+
+                <div
+                    style={{
+                        marginBottom: "12px",
+                    }}
+                >
+                    <div
+                        style={{
+                            fontSize: "13px",
+                            fontWeight: "600",
+                            marginBottom: "6px",
+                        }}
+                    >
+                        場所の属性
+                    </div>
+
+                    <div
+                        style={{
+                            display: "grid",
+                            gridTemplateColumns: "1fr 1fr",
+                            gap: "6px",
+                        }}
+                    >
+                        {PLACE_TYPE_OPTIONS.map((option) => (
+                            <label
+                                key={option.value}
+                                style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "6px",
+                                    fontSize: "13px",
+                                    cursor: "pointer",
+                                }}
+                            >
+                                <input
+                                    type="checkbox"
+                                    checked={placeTypes.includes(option.value)}
+                                    onChange={() =>
+                                        handlePlaceTypeChange(option.value)
+                                    }
+                                />
+
+                                {option.label}
+                            </label>
+                        ))}
+                    </div>
+                </div>
+
+                <select
+                    value={level}
+                    onChange={(event) => setLevel(Number(event.target.value))}
+                    style={{
+                        width: "100%",
+                        padding: "10px",
+                        marginBottom: "10px",
+                        boxSizing: "border-box",
+                    }}
+                >
+                    <option value={-1}>高さ_-1（地下）</option>
+                    <option value={0}>高さ_1（地上）</option>
+                    <option value={1}>高さ_2</option>
+                    <option value={2}>高さ_3</option>
+                    <option value={3}>高さ_4</option>
                 </select>
 
                 <input
@@ -223,20 +312,6 @@ function PlaceForm({
                         padding: "10px",
                         marginBottom: "16px",
                         boxSizing: "border-box",
-                    }}
-                />
-
-                <textarea
-                    placeholder="説明"
-                    value={description}
-                    onChange={(event) => setDescription(event.target.value)}
-                    rows={2}
-                    style={{
-                        width: "100%",
-                        padding: "10px",
-                        marginBottom: "10px",
-                        boxSizing: "border-box",
-                        resize: "vertical",
                     }}
                 />
 

@@ -3,6 +3,38 @@ import * as Cesium from "cesium";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 import { findShortestRoute } from "../utils/routeSearch";
 
+const LEVEL_HEIGHTS = {
+    [-1]: -5,
+    [0]: 0,
+    [1]: 2.5,
+    [2]: 5,
+    [3]: 7.5,
+};
+
+const getLevelHeight = (level) => {
+    return LEVEL_HEIGHTS[Number(level)] ?? 0;
+};
+
+const getMovementColor = (movementType) => {
+    switch (movementType) {
+        case "stairs":
+            return Cesium.Color.ORANGE;
+
+        case "ramp":
+            return Cesium.Color.LIMEGREEN;
+
+        case "escalator":
+            return Cesium.Color.YELLOW;
+
+        case "elevator":
+            return Cesium.Color.MEDIUMPURPLE;
+
+        case "level":
+        default:
+            return Cesium.Color.DODGERBLUE;
+    }
+};
+
 function MapViewer({
     places,
     edges,
@@ -33,6 +65,50 @@ function MapViewer({
         });
 
         viewerRef.current = viewer;
+
+        const logCameraPosition = (event) => {
+            if (event.key.toLowerCase() !== "p") return;
+
+            const cameraPosition = viewer.camera.positionCartographic;
+
+            console.log({
+                longitude: Cesium.Math.toDegrees(
+                    cameraPosition.longitude
+                ),
+                latitude: Cesium.Math.toDegrees(
+                    cameraPosition.latitude
+                ),
+                height: cameraPosition.height,
+                heading: Cesium.Math.toDegrees(
+                    viewer.camera.heading
+                ),
+                pitch: Cesium.Math.toDegrees(
+                    viewer.camera.pitch
+                ),
+                roll: Cesium.Math.toDegrees(
+                    viewer.camera.roll
+                ),
+            });
+        };
+
+        window.addEventListener("keydown", logCameraPosition);
+
+        viewer.camera.setView({
+            destination: Cesium.Cartesian3.fromDegrees(
+                139.72037679953405,
+                35.797475765617214,
+                476.506342001156
+            ),
+            orientation: {
+                heading: Cesium.Math.toRadians(
+                    5.464909766623306
+                ),
+                pitch: Cesium.Math.toRadians(
+                    -35.37597053029679
+                ),
+                roll: 0,
+            },
+        });
 
         const handler = new Cesium.ScreenSpaceEventHandler(
             viewer.scene.canvas
@@ -109,17 +185,6 @@ function MapViewer({
             Cesium.KeyboardEventModifier.SHIFT
         );
 
-        const routeEntity = viewer.entities.add({
-            show: false,
-
-            polyline: {
-                positions: [],
-                material: Cesium.Color.DODGERBLUE.withAlpha(0.8),
-                width: 8,
-                clampToGround: true,
-            },
-        });
-
         routeEntitiesRef.current.push(routeEntity);
 
         const resizeTimer = setTimeout(() => {
@@ -130,6 +195,11 @@ function MapViewer({
 
         return () => {
             clearTimeout(resizeTimer);
+
+            window.removeEventListener(
+                "keydown",
+                logCameraPosition
+            );
 
             handler.destroy();
             viewer.destroy();
@@ -156,6 +226,7 @@ function MapViewer({
         // 最新のplacesからマーカーを作り直す
         places.forEach((item) => {
             const isRoute = item.type === "route";
+            const isJunction = item.type === "junction";
             const isSelected = item.id === place.id;
 
             const entity = viewer.entities.add({
@@ -163,37 +234,55 @@ function MapViewer({
 
                 position: Cesium.Cartesian3.fromDegrees(
                     item.longitude,
-                    item.latitude
+                    item.latitude,
+                    getLevelHeight(item.level)
                 ),
 
-                point: {
-                    pixelSize: isSelected
-                        ? isRoute
-                            ? 15
-                            : 11
-                        : isRoute
-                            ? 12
-                            : 8,
+                point: isJunction
+                    ? undefined
+                    : {
+                        pixelSize: isSelected
+                            ? isRoute
+                                ? 15
+                                : 11
+                            : isRoute
+                                ? 12
+                                : 8,
 
-                    color: isSelected
-                        ? Cesium.Color.LIME
-                        : isRoute
-                            ? Cesium.Color.RED
-                            : Cesium.Color.GRAY,
+                        color: isSelected
+                            ? Cesium.Color.LIME
+                            : isRoute
+                                ? Cesium.Color.RED
+                                : Cesium.Color.GRAY,
 
-                    outlineColor: Cesium.Color.BLACK,
-                    outlineWidth: 1,
-                },
+                        outlineColor: Cesium.Color.BLACK,
+                        outlineWidth: 1,
+                        disableDepthTestDistance:
+                            Number.POSITIVE_INFINITY,
+                    },
 
-                label: {
-                    text: item.name,
-                    font: "16px sans-serif",
-                    pixelOffset: new Cesium.Cartesian2(0, -35),
-                    fillColor: Cesium.Color.WHITE,
-                    outlineColor: Cesium.Color.BLACK,
-                    outlineWidth: 3,
-                    style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-                },
+                label: isJunction
+                    ? undefined
+                    : {
+                        text: item.name,
+                        font: "16px sans-serif",
+                        pixelOffset: new Cesium.Cartesian2(0, -35),
+                        fillColor: Cesium.Color.WHITE,
+                        outlineColor: Cesium.Color.BLACK,
+                        outlineWidth: 3,
+                        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+                    },
+
+                billboard: isJunction
+                    ? {
+                        image: "/icons/junction.svg",
+                        width: isSelected ? 24 : 20,
+                        height: isSelected ? 24 : 20,
+                        verticalOrigin: Cesium.VerticalOrigin.CENTER,
+                        horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
+                        disableDepthTestDistance: Number.POSITIVE_INFINITY,
+                    }
+                    : undefined,
             });
 
             entity.place = item;
@@ -206,46 +295,75 @@ function MapViewer({
 
         if (!viewer || viewer.isDestroyed()) return;
 
-        viewer.camera.flyTo({
-            destination: Cesium.Cartesian3.fromDegrees(
-                place.longitude,
-                place.latitude,
-                place.height
-            ),
-            duration: 2,
-        });
+        const targetPosition = Cesium.Cartesian3.fromDegrees(
+            place.longitude,
+            place.latitude,
+            getLevelHeight(place.level)
+        );
+
+        viewer.camera.flyToBoundingSphere(
+            new Cesium.BoundingSphere(targetPosition, 1),
+            {
+                offset: new Cesium.HeadingPitchRange(
+                    viewer.camera.heading,
+                    viewer.camera.pitch,
+                    220
+                ),
+                duration: 1.2,
+            }
+        );
+
 
         entitiesRef.current.forEach((entity) => {
             const isSelected = entity.place.id === place.id;
             const isRoute = entity.place.type === "route";
+            const isJunction = entity.place.type === "junction";
 
-            entity.point.pixelSize = isSelected
-                ? isRoute
-                    ? 15
-                    : 11
-                : isRoute
-                    ? 12
-                    : 8;
+            if (isJunction) {
+                if (entity.billboard) {
+                    entity.billboard.width = isSelected ? 24 : 20;
+                    entity.billboard.height = isSelected ? 24 : 20;
+                }
 
-            entity.point.color = isSelected
-                ? Cesium.Color.LIME
-                : isRoute
-                    ? Cesium.Color.RED
-                    : Cesium.Color.GRAY;
+                return;
+            }
+
+            if (entity.point) {
+                entity.point.pixelSize = isSelected
+                    ? isRoute
+                        ? 15
+                        : 11
+                    : isRoute
+                        ? 12
+                        : 8;
+
+                entity.point.color = isSelected
+                    ? Cesium.Color.LIME
+                    : isRoute
+                        ? Cesium.Color.RED
+                        : Cesium.Color.GRAY;
+            }
         });
     }, [place]);
 
     useEffect(() => {
-        const entity = routeEntitiesRef.current[0];
+        const viewer = viewerRef.current;
 
-        if (!entity) return;
+        if (!viewer || viewer.isDestroyed()) return;
+
+        // 前回表示したルート線をすべて削除
+        routeEntitiesRef.current.forEach((entity) => {
+            viewer.entities.remove(entity);
+        });
+
+        routeEntitiesRef.current = [];
 
         if (
             !showRoute ||
             !routeAnchor ||
+            !place ||
             routeAnchor.id === place.id
         ) {
-            entity.show = false;
             return;
         }
 
@@ -257,16 +375,46 @@ function MapViewer({
         );
 
         if (!routeResult) {
-            entity.show = false;
             return;
         }
 
-        entity.polyline.positions =
-            routeResult.positions.map(([lon, lat]) =>
-                Cesium.Cartesian3.fromDegrees(lon, lat, 5)
+        routeResult.edges.forEach((routeEdge, index) => {
+            const fromPlace = places.find(
+                (item) => item.id === routeResult.path[index]
             );
 
-        entity.show = true;
+            const toPlace = places.find(
+                (item) => item.id === routeResult.path[index + 1]
+            );
+
+            if (!fromPlace || !toPlace) return;
+
+            const routeEntity = viewer.entities.add({
+                polyline: {
+                    positions: [
+                        Cesium.Cartesian3.fromDegrees(
+                            fromPlace.longitude,
+                            fromPlace.latitude,
+                            getLevelHeight(fromPlace.level)
+                        ),
+                        Cesium.Cartesian3.fromDegrees(
+                            toPlace.longitude,
+                            toPlace.latitude,
+                            getLevelHeight(toPlace.level)
+                        ),
+                    ],
+
+                    material: getMovementColor(
+                        routeEdge.movement_type
+                    ).withAlpha(0.9),
+
+                    width: 8,
+                    clampToGround: false,
+                },
+            });
+
+            routeEntitiesRef.current.push(routeEntity);
+        });
     }, [
         showRoute,
         routeAnchor,

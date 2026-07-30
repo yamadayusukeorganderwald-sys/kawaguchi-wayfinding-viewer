@@ -13,6 +13,8 @@ const toAppEdge = (edge) => ({
   to: edge.to,
   distance: edge.distance,
   walkingTime: edge.walking_time,
+  movement_type: edge.movement_type,
+  road_context: edge.road_context,
   bidirectional: edge.bidirectional,
 });
 
@@ -22,6 +24,8 @@ const toDatabaseEdge = (edge) => ({
   to: edge.to,
   distance: edge.distance,
   walking_time: edge.walkingTime,
+  movement_type: edge.movement_type,
+  road_context: edge.road_context,
   bidirectional: edge.bidirectional,
 });
 
@@ -323,6 +327,14 @@ function App() {
         setEditingEdge={setEditingEdge}
         onOpenEdgeForm={handleOpenEdgeForm}
         onDeleteEdge={handleDeleteEdge}
+        setShowPlaceForm={setShowPlaceForm}
+        setEditingPlace={setEditingPlace}
+
+        place={place}
+        routeAnchor={routeAnchor}
+        setRouteAnchor={setRouteAnchor}
+        showRoute={showRoute}
+        setShowRoute={setShowRoute}
       />
 
       {showPlaceForm && (

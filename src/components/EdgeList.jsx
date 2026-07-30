@@ -1,12 +1,20 @@
 import { useState } from "react";
 
 function EdgeList({
-    edges,
-    places,
-    setShowEdgeForm,
-    setEditingEdge,
-    onOpenEdgeForm,
-    onDeleteEdge,
+  edges,
+  places,
+  setShowEdgeForm,
+  setEditingEdge,
+  onOpenEdgeForm,
+  onDeleteEdge,
+  setShowPlaceForm,
+  setEditingPlace,
+
+  place,
+  routeAnchor,
+  setRouteAnchor,
+  showRoute,
+  setShowRoute,
 }) {
     const [isOpen, setIsOpen] = useState(false);
 
@@ -34,6 +42,20 @@ function EdgeList({
             }}
         >
             <button
+                onClick={() => {
+                    setEditingPlace(null);
+                    setShowPlaceForm(true);
+                }}
+                style={{
+                    marginBottom: "8px",
+                    width: "100%",
+                    padding: "8px",
+                    cursor: "pointer",
+                }}
+            >
+                ＋ 地点追加
+            </button>
+            <button
                 onClick={onOpenEdgeForm}
                 style={{
                     marginBottom: "8px",
@@ -44,6 +66,125 @@ function EdgeList({
             >
                 ＋ Edge追加
             </button>
+
+            <button
+                onClick={() => {
+                    setRouteAnchor(place);
+                    setShowRoute(true);
+                }}
+                style={{
+                    width: "100%",
+                    padding: "8px",
+                    marginBottom: "8px",
+                    border: "1px solid #ccc",
+                    borderRadius: "6px",
+                    background: "#fff",
+                    cursor: "pointer",
+                }}
+            >
+                📍 起点に設定
+            </button>
+
+            <div
+                style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "flex-start",
+                    gap: "16px",
+                    marginBottom: "5px",
+                }}
+            >
+                <div style={{ flex: 1 }}>
+                    <div
+                        style={{
+                            fontSize: "10px",
+                            marginBottom: "1px",
+                        }}
+                    >
+                        <span
+                            style={{
+                                display: "inline-block",
+                                width: "40px",
+                                color: "#888",
+                                fontWeight: "600",
+                            }}
+                        >
+                            FROM
+                        </span>
+
+                        {routeAnchor ? routeAnchor.name : "未設定"}
+                    </div>
+
+                    <div
+                        style={{
+                            fontSize: "10px",
+                        }}
+                    >
+                        <span
+                            style={{
+                                display: "inline-block",
+                                width: "40px",
+                                color: "#888",
+                                fontWeight: "600",
+                            }}
+                        >
+                            TO
+                        </span>
+
+                        {place.name}
+                    </div>
+                </div>
+
+                <div
+                    onClick={() => setShowRoute(!showRoute)}
+                    style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        width: "130px",
+                        padding: "8px 12px",
+                        border: "1px solid #ddd",
+                        borderRadius: "8px",
+                        background: "#fff",
+                        cursor: "pointer",
+                        userSelect: "none",
+                        flexShrink: 0,
+                    }}
+                >
+                    <span
+                        style={{
+                            fontSize: "12px",
+                        }}
+                    >
+                        ルート表示
+                    </span>
+
+                    <div
+                        style={{
+                            width: "38px",
+                            height: "22px",
+                            borderRadius: "13px",
+                            background: showRoute ? "#2196F3" : "#bbb",
+                            position: "relative",
+                            transition: "0.2s",
+                        }}
+                    >
+                        <div
+                            style={{
+                                width: "18px",
+                                height: "18px",
+                                borderRadius: "50%",
+                                background: "#fff",
+                                position: "absolute",
+                                top: "2px",
+                                left: showRoute ? "18px" : "2px",
+                                transition: "0.2s",
+                                boxShadow: "0 1px 4px rgba(0,0,0,.3)",
+                            }}
+                        />
+                    </div>
+                </div>
+            </div>
 
             <button
                 onClick={() => setIsOpen((current) => !current)}

@@ -1,3 +1,12 @@
+const PLACE_TYPE_LABELS = {
+    station: "駅",
+    shop: "店舗",
+    entrance: "入口",
+    landmark: "ランドマーク",
+    plaza: "広場",
+    crossing: "横断地点",
+};
+
 function Sidebar({
     place,
     setPlace,
@@ -74,150 +83,52 @@ function Sidebar({
                     ))}
             </div>
 
-            <button
-                onClick={() => {
-                    setRouteAnchor(place);
-                    setShowRoute(true);
-                }}
+            <h2
                 style={{
-                    width: "100%",
-                    padding: "8px",
-                    marginBottom: "8px",
-                    border: "1px solid #ccc",
-                    borderRadius: "6px",
-                    background: "#fff",
-                    cursor: "pointer",
+                    fontSize: "18px",
+                    margin: "14px 0 6px",
                 }}
             >
-                この地点を起点に設定
-            </button>
+                {place.name}
+            </h2>
 
             <div
                 style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "flex-start",
-                    gap: "16px",
-                    marginBottom: "5px",
+                    fontSize: "11px",
+                    color: "#666",
+                    marginBottom: "6px",
                 }}
             >
-                <div style={{ flex: 1 }}>
-                    <div
-                        style={{
-                            fontSize: "10px",
-                            marginBottom: "1px",
-                        }}
-                    >
-                        <span
-                            style={{
-                                display: "inline-block",
-                                width: "40px",
-                                color: "#888",
-                                fontWeight: "600",
-                            }}
-                        >
-                            FROM
-                        </span>
-
-                        {routeAnchor ? routeAnchor.name : "未設定"}
-                    </div>
-
-                    <div
-                        style={{
-                            fontSize: "10px",
-                        }}
-                    >
-                        <span
-                            style={{
-                                display: "inline-block",
-                                width: "40px",
-                                color: "#888",
-                                fontWeight: "600",
-                            }}
-                        >
-                            TO
-                        </span>
-
-                        {place.name}
-                    </div>
-                </div>
-
-                <div
-                    onClick={() => setShowRoute(!showRoute)}
-                    style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        width: "130px",
-                        padding: "8px 12px",
-                        border: "1px solid #ddd",
-                        borderRadius: "8px",
-                        background: "#fff",
-                        cursor: "pointer",
-                        userSelect: "none",
-                        flexShrink: 0,
-                    }}
-                >
-                    <span
-                        style={{
-                            fontSize: "12px",
-                        }}
-                    >
-                        ルート表示
-                    </span>
-
-                    <div
-                        style={{
-                            width: "38px",
-                            height: "22px",
-                            borderRadius: "13px",
-                            background: showRoute ? "#2196F3" : "#bbb",
-                            position: "relative",
-                            transition: "0.2s",
-                        }}
-                    >
-                        <div
-                            style={{
-                                width: "18px",
-                                height: "18px",
-                                borderRadius: "50%",
-                                background: "#fff",
-                                position: "absolute",
-                                top: "2px",
-                                left: showRoute ? "18px" : "2px",
-                                transition: "0.2s",
-                                boxShadow: "0 1px 4px rgba(0,0,0,.3)",
-                            }}
-                        />
-                    </div>
-                </div>
+                {place.type === "route" && "目的地点"}
+                {place.type === "junction" && "ルート設定用ポイント"}
+                {place.type === "observation" && "観察地点"}
             </div>
 
-            <button
-                onClick={() => {
-                    setEditingPlace(null);
-                    setShowPlaceForm(true);
-                }}
-                style={{
-                    width: "100%",
-                    padding: "10px",
-                    marginTop: "5px",
-                    marginBottom: "10px",
-                    borderRadius: "6px",
-                    border: "1px solid #ccc",
-                    cursor: "pointer",
-                }}
-            >
-                ＋ 地点追加
-            </button>
-
-            <p
-                style={{
-                    margin: "0 0 4px",
-                }}
-            >
-                {place.description}
-            </p>
+            {place.place_type?.length > 0 && (
+                <div
+                    style={{
+                        display: "flex",
+                        flexWrap: "wrap",
+                        gap: "6px",
+                        marginBottom: "12px",
+                    }}
+                >
+                    {place.place_type.map((type) => (
+                        <span
+                            key={type}
+                            style={{
+                                padding: "3px 7px",
+                                border: "1px solid #bbb",
+                                borderRadius: "999px",
+                                background: "#fff",
+                                fontSize: "11px",
+                            }}
+                        >
+                            {PLACE_TYPE_LABELS[type] ?? type}
+                        </span>
+                    ))}
+                </div>
+            )}
 
             <div
                 style={{
