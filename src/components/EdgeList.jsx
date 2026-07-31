@@ -16,6 +16,11 @@ function EdgeList({
     setRouteAnchor,
     showRoute,
     setShowRoute,
+
+    selectedEdge,
+    edgeSplitMode,
+    onStartEdgeSplit,
+    onCancelEdgeSplit,
 }) {
     const [isOpen, setIsOpen] = useState(false);
 
@@ -66,6 +71,37 @@ function EdgeList({
                 }}
             >
                 ＋ Edge追加
+            </button>
+            <button
+                onClick={
+                    edgeSplitMode === "idle"
+                        ? onStartEdgeSplit
+                        : onCancelEdgeSplit
+                }
+                disabled={!selectedEdge && edgeSplitMode === "idle"}
+                style={{
+                    marginBottom: "8px",
+                    width: "100%",
+                    padding: "8px",
+                    cursor:
+                        selectedEdge || edgeSplitMode !== "idle"
+                            ? "pointer"
+                            : "not-allowed",
+                    opacity:
+                        selectedEdge || edgeSplitMode !== "idle"
+                            ? 1
+                            : 0.45,
+                    background:
+                        edgeSplitMode !== "idle"
+                            ? "#ffe0b2"
+                            : "#fff",
+                    border: "1px solid #ccc",
+                    borderRadius: "6px",
+                }}
+            >
+                {edgeSplitMode === "idle"
+                    ? "✂ Edge分割"
+                    : "✕ Edge分割をキャンセル"}
             </button>
 
             <button

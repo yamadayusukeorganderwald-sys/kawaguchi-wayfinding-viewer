@@ -30,6 +30,43 @@ const toDatabaseEdge = (edge) => ({
   bidirectional: edge.bidirectional,
 });
 
+const calculateDistanceMeters = (
+  fromLongitude,
+  fromLatitude,
+  toLongitude,
+  toLatitude
+) => {
+  const earthRadius = 6371000;
+
+  const toRadians = (degrees) =>
+    degrees * Math.PI / 180;
+
+  const latitude1 = toRadians(fromLatitude);
+  const latitude2 = toRadians(toLatitude);
+
+  const latitudeDifference = toRadians(
+    toLatitude - fromLatitude
+  );
+
+  const longitudeDifference = toRadians(
+    toLongitude - fromLongitude
+  );
+
+  const a =
+    Math.sin(latitudeDifference / 2) ** 2 +
+    Math.cos(latitude1) *
+    Math.cos(latitude2) *
+    Math.sin(longitudeDifference / 2) ** 2;
+
+  const c =
+    2 * Math.atan2(
+      Math.sqrt(a),
+      Math.sqrt(1 - a)
+    );
+
+  return Math.round(earthRadius * c);
+};
+
 function App() {
   const [placeList, setPlaceList] = useState([]);
   const [place, setPlace] = useState(null);
@@ -46,7 +83,28 @@ function App() {
   const [selectedEdge, setSelectedEdge] = useState(null);
   const [initialEdge, setInitialEdge] = useState(null);
 
-  const isMobile = window.innerWidth < 768;
+  const [edgeSplitMode, setEdgeSplitMode] = useState("idle");
+  const [splitTargetEdge, setSplitTargetEdge] = useState(null);
+  const [splitPreviewPosition, setSplitPreviewPosition] = useState(null);
+
+  const [isMobile, setIsMobile] = useState(
+    () => window.matchMedia("(max-width: 767px)").matches
+  );
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 767px)");
+
+    const handleChange = (event) => {
+      setIsMobile(event.matches);
+    };
+
+    setIsMobile(mediaQuery.matches);
+    mediaQuery.addEventListener("change", handleChange);
+
+    return () => {
+      mediaQuery.removeEventListener("change", handleChange);
+    };
+  }, []);
 
   const [isLoading, setIsLoading] = useState(true);
 
@@ -65,7 +123,13 @@ function App() {
       } else {
         const loadedPlaces = places ?? [];
         setPlaceList(loadedPlaces);
-        setPlace(loadedPlaces[0] ?? null);
+
+        const initialPlace =
+          loadedPlaces.find((item) => item.id === "entrance") ??
+          loadedPlaces[0] ??
+          null;
+
+        setPlace(initialPlace);
       }
 
       if (edgesError) {
@@ -129,6 +193,23 @@ function App() {
 
   const handleEdgeClick = (edge) => {
     setSelectedEdge(edge);
+  };
+
+  const handleStartEdgeSplit = () => {
+    if (!selectedEdge) {
+      alert("分割するEdgeを選択してください");
+      return;
+    }
+
+    setSplitTargetEdge(selectedEdge);
+    setEdgeSplitMode("selectingOnEdge");
+    setSplitPreviewPosition(null);
+  };
+
+  const handleCancelEdgeSplit = () => {
+    setEdgeSplitMode("idle");
+    setSplitTargetEdge(null);
+    setSplitPreviewPosition(null);
   };
 
   const handleAddPlace = async (newPlace) => {
@@ -200,6 +281,14 @@ function App() {
 
     setPlaceList(updatedPlaces);
 
+    setEdgeList((currentEdges) =>
+      currentEdges.filter(
+        (edge) =>
+          edge.from !== targetPlace.id &&
+          edge.to !== targetPlace.id
+      )
+    );
+
     if (routeAnchor?.id === targetPlace.id) {
       setRouteAnchor(null);
       setShowRoute(false);
@@ -256,6 +345,160 @@ function App() {
     );
 
     closeEdgeForm();
+  };
+
+  const handleConfirmEdgeSplit = async ({
+    edge,
+    splitPosition,
+    newPointPosition,
+  }) => {
+
+    const newPlace = {
+      id: crypto.randomUUID(),
+      name: "新規地点",
+      type: "junction",
+
+      longitude: newPointPosition.longitude,
+      latitude: newPointPosition.latitude,
+      level: newPointPosition.level,
+
+      description: "",
+      observation: "",
+      problem: "",
+      proposal: "",
+      image: "",
+    };
+
+    const { data: savedPlace, error: placeError } =
+      await supabase
+        .from("places")
+        .insert(newPlace)
+        .select()
+        .single();
+
+    if (placeError) {
+      console.error(
+        "分割地点の追加に失敗:",
+        placeError
+      );
+
+      alert("分割地点を保存できませんでした");
+      setEdgeSplitMode("placingNewPoint");
+      return;
+    }
+
+    const fromPlace = placeList.find(
+      (item) => item.id === edge.from
+    );
+
+    const toPlace = placeList.find(
+      (item) => item.id === edge.to
+    );
+
+    if (!fromPlace || !toPlace) {
+      alert("元Edgeの地点情報が見つかりませんでした");
+      return;
+    }
+
+    const distanceFromToNew = calculateDistanceMeters(
+      fromPlace.longitude,
+      fromPlace.latitude,
+      savedPlace.longitude,
+      savedPlace.latitude
+    );
+
+    const distanceNewToTo = calculateDistanceMeters(
+      savedPlace.longitude,
+      savedPlace.latitude,
+      toPlace.longitude,
+      toPlace.latitude
+    );
+
+    const walkingTimeFromToNew = Math.max(
+      1,
+      Math.round(distanceFromToNew / 1.2)
+    );
+
+    const walkingTimeNewToTo = Math.max(
+      1,
+      Math.round(distanceNewToTo / 1.2)
+    );
+
+    const newEdges = [
+      {
+        id: crypto.randomUUID(),
+        from: edge.from,
+        to: savedPlace.id,
+        distance: distanceFromToNew,
+        walkingTime: walkingTimeFromToNew,
+        movement_type: edge.movement_type,
+        road_context: edge.road_context,
+        bidirectional: edge.bidirectional,
+      },
+      {
+        id: crypto.randomUUID(),
+        from: savedPlace.id,
+        to: edge.to,
+        distance: distanceNewToTo,
+        walkingTime: walkingTimeNewToTo,
+        movement_type: edge.movement_type,
+        road_context: edge.road_context,
+        bidirectional: edge.bidirectional,
+      },
+    ];
+
+    const { data: savedEdges, error: edgesError } =
+      await supabase
+        .from("edges")
+        .insert(newEdges.map(toDatabaseEdge))
+        .select();
+
+    if (edgesError) {
+      console.error(
+        "分割後Edgeの追加に失敗:",
+        edgesError
+      );
+
+      alert("分割後のEdgeを保存できませんでした");
+      return;
+    }
+
+    const { error: deleteEdgeError } =
+      await supabase
+        .from("edges")
+        .delete()
+        .eq("id", edge.id);
+
+    if (deleteEdgeError) {
+      console.error(
+        "元Edgeの削除に失敗:",
+        deleteEdgeError
+      );
+
+      alert("元のEdgeを削除できませんでした");
+      return;
+    }
+
+    setPlaceList((currentPlaces) => [
+      ...currentPlaces,
+      savedPlace,
+    ]);
+
+    setEdgeList((currentEdges) => [
+      ...currentEdges.filter(
+        (item) => item.id !== edge.id
+      ),
+      ...savedEdges.map(toAppEdge),
+    ]);
+
+    setPlace(savedPlace);
+    setSelectedEdge(null);
+    setShowRoute(false);
+    setRouteAnchor(null);
+
+    setEdgeSplitMode("idle");
+    setSplitTargetEdge(null);
+    setSplitPreviewPosition(null);
   };
 
   const handleDeleteEdge = async (targetEdge) => {
@@ -356,6 +599,13 @@ function App() {
         onEdgeClick={handleEdgeClick}
         selectedEdge={selectedEdge}
         isMobile={isMobile}
+
+        edgeSplitMode={edgeSplitMode}
+        setEdgeSplitMode={setEdgeSplitMode}
+        splitTargetEdge={splitTargetEdge}
+        splitPreviewPosition={splitPreviewPosition}
+        setSplitPreviewPosition={setSplitPreviewPosition}
+        onConfirmEdgeSplit={handleConfirmEdgeSplit}
       />
 
       <EdgeList
@@ -374,6 +624,11 @@ function App() {
         showRoute={showRoute}
         setShowRoute={setShowRoute}
         isMobile={isMobile}
+
+        selectedEdge={selectedEdge}
+        edgeSplitMode={edgeSplitMode}
+        onStartEdgeSplit={handleStartEdgeSplit}
+        onCancelEdgeSplit={handleCancelEdgeSplit}
       />
 
       {showPlaceForm && (

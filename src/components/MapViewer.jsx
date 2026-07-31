@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import * as Cesium from "cesium";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 import { findShortestRoute } from "../utils/routeSearch";
+import { getClosestPointOnSegment } from "../utils/geometry";
 
 const LEVEL_HEIGHTS = {
     [-1]: -5,
@@ -49,6 +50,13 @@ function MapViewer({
     onEdgeClick,
     selectedEdge,
     isMobile,
+
+    edgeSplitMode,
+    setEdgeSplitMode,
+    splitTargetEdge,
+    splitPreviewPosition,
+    setSplitPreviewPosition,
+    onConfirmEdgeSplit,
 }) {
     const cesiumContainer = useRef(null);
     const viewerRef = useRef(null);
@@ -57,10 +65,36 @@ function MapViewer({
     const routeEntitiesRef = useRef([]);
     const clickedMarkerRef = useRef(null);
     const currentPlaceRef = useRef(place);
+    const splitPreviewRef = useRef(null);
+    const newPointPreviewRef = useRef(null);
+    const newPointPositionRef = useRef(null);
+    const splitPreviewPositionRef = useRef(null);
+    const edgeSplitModeRef = useRef(edgeSplitMode);
+    const splitTargetEdgeRef = useRef(splitTargetEdge);
+    const placesRef = useRef(places);
+    const splitEdgePreviewRefs = useRef([]);
+    const onConfirmEdgeSplitRef = useRef(onConfirmEdgeSplit);
+    const previousPlaceIdRef = useRef(place?.id ?? null);
+
+    useEffect(() => {
+        edgeSplitModeRef.current = edgeSplitMode;
+    }, [edgeSplitMode]);
+
+    useEffect(() => {
+        splitTargetEdgeRef.current = splitTargetEdge;
+    }, [splitTargetEdge]);
+
+    useEffect(() => {
+        placesRef.current = places;
+    }, [places]);
 
     useEffect(() => {
         currentPlaceRef.current = place;
     }, [place]);
+
+    useEffect(() => {
+        onConfirmEdgeSplitRef.current = onConfirmEdgeSplit;
+    }, [onConfirmEdgeSplit]);
 
     useEffect(() => {
         const viewer = new Cesium.Viewer(cesiumContainer.current, {
@@ -119,6 +153,63 @@ function MapViewer({
         );
 
         handler.setInputAction((click) => {
+
+            // エッジ上の分割位置を確定
+            if (
+                edgeSplitModeRef.current === "selectingOnEdge"
+            ) {
+                const previewPosition =
+                    splitPreviewPositionRef.current;
+
+                if (!previewPosition) return;
+
+                setSplitPreviewPosition(previewPosition);
+
+                if (splitPreviewRef.current) {
+                    viewer.entities.remove(
+                        splitPreviewRef.current
+                    );
+                    splitPreviewRef.current = null;
+                }
+
+                setEdgeSplitMode("placingNewPoint");
+
+                return;
+            }
+
+            // 新しい地点の位置を確定
+            if (
+                edgeSplitModeRef.current === "placingNewPoint"
+            ) {
+                const newPointPosition =
+                    newPointPositionRef.current;
+
+                const splitPosition =
+                    splitPreviewPositionRef.current;
+
+                const edge =
+                    splitTargetEdgeRef.current;
+
+                if (
+                    !newPointPosition ||
+                    !splitPosition ||
+                    !edge
+                ) {
+                    return;
+                }
+
+                setEdgeSplitMode("confirmingSplit");
+
+                if (onConfirmEdgeSplitRef.current) {
+                    onConfirmEdgeSplitRef.current({
+                        edge,
+                        splitPosition,
+                        newPointPosition,
+                    });
+                }
+
+                return;
+            }
 
             // クリックした場所にマーカーがあるか確認
             const picked = viewer.scene.pick(click.position);
@@ -197,6 +288,114 @@ function MapViewer({
             Cesium.ScreenSpaceEventType.LEFT_CLICK,
             Cesium.KeyboardEventModifier.SHIFT
         );
+
+        handler.setInputAction((movement) => {
+            const mode = edgeSplitModeRef.current;
+
+            // エッジ上の分割位置を選んでいる状態
+            if (mode === "selectingOnEdge") {
+                const edge = splitTargetEdgeRef.current;
+
+                if (!edge) return;
+
+                const currentPlaces = placesRef.current;
+
+                const fromPlace = currentPlaces.find(
+                    (p) => p.id === edge.from
+                );
+
+                const toPlace = currentPlaces.find(
+                    (p) => p.id === edge.to
+                );
+
+                if (!fromPlace || !toPlace) return;
+
+                let cartesian =
+                    viewer.scene.pickPosition(
+                        movement.endPosition
+                    );
+
+                if (!cartesian) {
+                    cartesian =
+                        viewer.camera.pickEllipsoid(
+                            movement.endPosition,
+                            viewer.scene.globe.ellipsoid
+                        );
+                }
+
+                if (!cartesian) return;
+
+                const cartographic =
+                    Cesium.Cartographic.fromCartesian(cartesian);
+
+                const mouse = {
+                    x: Cesium.Math.toDegrees(
+                        cartographic.longitude
+                    ),
+                    y: Cesium.Math.toDegrees(
+                        cartographic.latitude
+                    ),
+                };
+
+                const closest =
+                    getClosestPointOnSegment(
+                        mouse,
+                        {
+                            x: fromPlace.longitude,
+                            y: fromPlace.latitude,
+                        },
+                        {
+                            x: toPlace.longitude,
+                            y: toPlace.latitude,
+                        }
+                    );
+
+                updateSplitPreview(
+                    closest.x,
+                    closest.y,
+                    fromPlace.level
+                );
+
+                return;
+            }
+
+            // 新しい地点を自由配置している状態
+            if (mode === "placingNewPoint") {
+                let cartesian =
+                    viewer.scene.pickPosition(
+                        movement.endPosition
+                    );
+
+                if (!cartesian) {
+                    cartesian =
+                        viewer.camera.pickEllipsoid(
+                            movement.endPosition,
+                            viewer.scene.globe.ellipsoid
+                        );
+                }
+
+                if (!cartesian) return;
+
+                const cartographic =
+                    Cesium.Cartographic.fromCartesian(cartesian);
+
+                const fixedPosition =
+                    splitPreviewPositionRef.current;
+
+                if (!fixedPosition) return;
+
+                updateNewPointPreview(
+                    Cesium.Math.toDegrees(
+                        cartographic.longitude
+                    ),
+                    Cesium.Math.toDegrees(
+                        cartographic.latitude
+                    ),
+                    fixedPosition.level
+                );
+            }
+
+        }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
 
         const resizeTimer = setTimeout(() => {
             if (!viewer.isDestroyed()) {
@@ -315,6 +514,12 @@ function MapViewer({
 
         edges.forEach((edge) => {
 
+            const isSplitTarget =
+                edgeSplitMode === "placingNewPoint" &&
+                splitTargetEdge?.id === edge.id;
+
+            if (isSplitTarget) return;
+
             const fromPlace = places.find(
                 (place) => place.id === edge.from
             );
@@ -379,12 +584,25 @@ function MapViewer({
             edgeEntitiesRef.current.push(hitEntity);
         });
 
-    }, [edges, places, selectedEdge]);
+    }, [
+        edges,
+        places,
+        selectedEdge,
+        edgeSplitMode,
+        splitTargetEdge,
+    ]);
 
     useEffect(() => {
         const viewer = viewerRef.current;
 
         if (!viewer || viewer.isDestroyed()) return;
+
+        // 同じ地点ではカメラを動かさない
+        if (previousPlaceIdRef.current === place.id) {
+            return;
+        }
+
+        previousPlaceIdRef.current = place.id;
 
         const targetPosition = Cesium.Cartesian3.fromDegrees(
             place.longitude,
@@ -615,16 +833,243 @@ function MapViewer({
         };
     }, [clickedPosition]);
 
+    const updateSplitPreview = (longitude, latitude, level = 0) => {
+        const viewer = viewerRef.current;
+
+        if (!viewer || viewer.isDestroyed()) return;
+
+        const previewPosition = {
+            longitude,
+            latitude,
+            level,
+        };
+
+        // マウスが示している最新の位置を保存
+        splitPreviewPositionRef.current = previewPosition;
+
+        if (splitPreviewRef.current) {
+            viewer.entities.remove(splitPreviewRef.current);
+        }
+
+        splitPreviewRef.current = viewer.entities.add({
+            position: Cesium.Cartesian3.fromDegrees(
+                longitude,
+                latitude,
+                getLevelHeight(level)
+            ),
+
+            point: {
+                pixelSize: 14,
+                color: Cesium.Color.YELLOW,
+                outlineColor: Cesium.Color.BLACK,
+                outlineWidth: 2,
+                disableDepthTestDistance:
+                    Number.POSITIVE_INFINITY,
+            },
+        });
+    };
+
+    const updateNewPointPreview = (
+        longitude,
+        latitude,
+        level = 0
+    ) => {
+        const viewer = viewerRef.current;
+
+        if (!viewer || viewer.isDestroyed()) return;
+
+        const newPointPosition = {
+            longitude,
+            latitude,
+            level,
+        };
+
+        newPointPositionRef.current = newPointPosition;
+
+        if (newPointPreviewRef.current) {
+            viewer.entities.remove(
+                newPointPreviewRef.current
+            );
+        }
+
+        newPointPreviewRef.current = viewer.entities.add({
+            position: Cesium.Cartesian3.fromDegrees(
+                longitude,
+                latitude,
+                getLevelHeight(level)
+            ),
+
+            point: {
+                pixelSize: 12,
+                color: Cesium.Color.LIME,
+                outlineColor: Cesium.Color.BLACK,
+                outlineWidth: 2,
+                disableDepthTestDistance:
+                    Number.POSITIVE_INFINITY,
+            },
+        });
+
+        splitEdgePreviewRefs.current.forEach((entity) => {
+            viewer.entities.remove(entity);
+        });
+
+        splitEdgePreviewRefs.current = [];
+
+        const edge = splitTargetEdgeRef.current;
+        const currentPlaces = placesRef.current;
+
+        if (!edge) return;
+
+        const fromPlace = currentPlaces.find(
+            (p) => p.id === edge.from
+        );
+
+        const toPlace = currentPlaces.find(
+            (p) => p.id === edge.to
+        );
+
+        if (!fromPlace || !toPlace) return;
+
+        const newPointCartesian =
+            Cesium.Cartesian3.fromDegrees(
+                longitude,
+                latitude,
+                getLevelHeight(level)
+            );
+
+        const fromPreviewEdge = viewer.entities.add({
+            polyline: {
+                positions: [
+                    Cesium.Cartesian3.fromDegrees(
+                        fromPlace.longitude,
+                        fromPlace.latitude,
+                        getLevelHeight(fromPlace.level)
+                    ),
+                    newPointCartesian,
+                ],
+                material: Cesium.Color.LIME.withAlpha(0.9),
+                width: 6,
+                clampToGround: false,
+            },
+        });
+
+        const toPreviewEdge = viewer.entities.add({
+            polyline: {
+                positions: [
+                    newPointCartesian,
+                    Cesium.Cartesian3.fromDegrees(
+                        toPlace.longitude,
+                        toPlace.latitude,
+                        getLevelHeight(toPlace.level)
+                    ),
+                ],
+                material: Cesium.Color.LIME.withAlpha(0.9),
+                width: 6,
+                clampToGround: false,
+            },
+        });
+
+        splitEdgePreviewRefs.current = [
+            fromPreviewEdge,
+            toPreviewEdge,
+        ];
+
+    };
+
+    useEffect(() => {
+        const viewer = viewerRef.current;
+
+        if (!viewer || viewer.isDestroyed()) return;
+        if (edgeSplitMode !== "idle") return;
+
+        if (splitPreviewRef.current) {
+            viewer.entities.remove(
+                splitPreviewRef.current
+            );
+            splitPreviewRef.current = null;
+        }
+
+        if (newPointPreviewRef.current) {
+            viewer.entities.remove(
+                newPointPreviewRef.current
+            );
+            newPointPreviewRef.current = null;
+        }
+
+        splitEdgePreviewRefs.current.forEach((entity) => {
+            viewer.entities.remove(entity);
+        });
+
+        splitEdgePreviewRefs.current = [];
+        splitPreviewPositionRef.current = null;
+        newPointPositionRef.current = null;
+    }, [edgeSplitMode]);
+
+    const focusSelectedPlace = () => {
+        const viewer = viewerRef.current;
+
+        if (!viewer || viewer.isDestroyed() || !place) {
+            return;
+        }
+
+        const targetPosition = Cesium.Cartesian3.fromDegrees(
+            place.longitude,
+            place.latitude,
+            getLevelHeight(place.level)
+        );
+
+        viewer.camera.flyToBoundingSphere(
+            new Cesium.BoundingSphere(targetPosition, 1),
+            {
+                offset: new Cesium.HeadingPitchRange(
+                    Cesium.Math.toRadians(315), // 左上（北西）
+                    Cesium.Math.toRadians(-45), // 45°見下ろし
+                    220
+                ),
+                duration: 1.2,
+            }
+        );
+    };
+
     return (
         <div
-            ref={cesiumContainer}
             style={{
                 flex: 1,
                 minWidth: 0,
                 height: "100%",
                 position: "relative",
             }}
-        />
+        >
+            <div
+                ref={cesiumContainer}
+                style={{
+                    width: "100%",
+                    height: "100%",
+                }}
+            />
+
+            <button
+                type="button"
+                onClick={focusSelectedPlace}
+                title="選択地点に戻る"
+                style={{
+                    position: "absolute",
+                    right: isMobile ? "16px" : "24px",
+                    bottom: isMobile ? "24px" : "32px",
+                    width: "48px",
+                    height: "48px",
+                    borderRadius: "50%",
+                    border: "none",
+                    background: "rgba(255,255,255,0.95)",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+                    fontSize: "22px",
+                    cursor: "pointer",
+                    zIndex: 20,
+                }}
+            >
+                ◎
+            </button>
+        </div>
     );
 }
 
