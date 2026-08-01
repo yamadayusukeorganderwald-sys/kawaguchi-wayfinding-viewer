@@ -64,6 +64,14 @@ function PlaceForm({
 
     const [imageFile, setImageFile] = useState(null);
 
+    const inputStyle = {
+        width: "100%",
+        padding: "10px",
+        marginBottom: "10px",
+        boxSizing: "border-box",
+        fontSize: "16px",
+    };
+
     const handlePlaceTypeChange = (value) => {
         setPlaceTypes((currentTypes) => {
             if (currentTypes.includes(value)) {
@@ -73,6 +81,8 @@ function PlaceForm({
             return [...currentTypes, value];
         });
     };
+
+
 
     const handleSubmit = async (event) => {
         event.preventDefault();
@@ -155,7 +165,8 @@ function PlaceForm({
                 onSubmit={handleSubmit}
                 onClick={(event) => event.stopPropagation()}
                 style={{
-                    width: "360px",
+                    width: "min(360px, calc(100vw - 24px))",
+                    boxSizing: "border-box",
                     padding: "24px",
                     borderRadius: "12px",
                     maxHeight: "80vh",
@@ -200,23 +211,13 @@ function PlaceForm({
                     placeholder="地点名"
                     value={name}
                     onChange={(event) => setName(event.target.value)}
-                    style={{
-                        width: "100%",
-                        padding: "10px",
-                        marginBottom: "10px",
-                        boxSizing: "border-box",
-                    }}
+                    style={inputStyle}
                 />
 
                 <select
                     value={type}
                     onChange={(event) => setType(event.target.value)}
-                    style={{
-                        width: "100%",
-                        padding: "10px",
-                        marginBottom: "10px",
-                        boxSizing: "border-box",
-                    }}
+                    style={inputStyle}
                 >
                     <option value="observation">観察地点</option>
                     <option value="route">目的地点</option>
@@ -273,12 +274,7 @@ function PlaceForm({
                 <select
                     value={level}
                     onChange={(event) => setLevel(Number(event.target.value))}
-                    style={{
-                        width: "100%",
-                        padding: "10px",
-                        marginBottom: "10px",
-                        boxSizing: "border-box",
-                    }}
+                    style={inputStyle}
                 >
                     <option value={-1}>高さ_-1（地下）</option>
                     <option value={0}>高さ_1（地上）</option>
@@ -293,12 +289,7 @@ function PlaceForm({
                     placeholder="経度"
                     value={longitude}
                     onChange={(event) => setLongitude(event.target.value)}
-                    style={{
-                        width: "100%",
-                        padding: "10px",
-                        marginBottom: "10px",
-                        boxSizing: "border-box",
-                    }}
+                    style={inputStyle}
                 />
 
                 <input
@@ -307,12 +298,7 @@ function PlaceForm({
                     placeholder="緯度"
                     value={latitude}
                     onChange={(event) => setLatitude(event.target.value)}
-                    style={{
-                        width: "100%",
-                        padding: "10px",
-                        marginBottom: "16px",
-                        boxSizing: "border-box",
-                    }}
+                    style={inputStyle}
                 />
 
                 <textarea
@@ -321,10 +307,7 @@ function PlaceForm({
                     onChange={(event) => setObservation(event.target.value)}
                     rows={3}
                     style={{
-                        width: "100%",
-                        padding: "10px",
-                        marginBottom: "10px",
-                        boxSizing: "border-box",
+                        ...inputStyle,
                         resize: "vertical",
                     }}
                 />
@@ -335,10 +318,7 @@ function PlaceForm({
                     onChange={(event) => setProblem(event.target.value)}
                     rows={3}
                     style={{
-                        width: "100%",
-                        padding: "10px",
-                        marginBottom: "10px",
-                        boxSizing: "border-box",
+                        ...inputStyle,
                         resize: "vertical",
                     }}
                 />
@@ -349,10 +329,8 @@ function PlaceForm({
                     onChange={(event) => setProposal(event.target.value)}
                     rows={3}
                     style={{
-                        width: "100%",
-                        padding: "10px",
+                        ...inputStyle,
                         marginBottom: "16px",
-                        boxSizing: "border-box",
                         resize: "vertical",
                     }}
                 />
@@ -366,6 +344,7 @@ function PlaceForm({
                     style={{
                         width: "100%",
                         marginBottom: "16px",
+                        fontSize: "16px",
                     }}
                 />
 

@@ -36,6 +36,16 @@ function EdgeForm({
         editingEdge?.bidirectional ?? true
     );
 
+    const fieldStyle = {
+        display: "block",
+        width: "100%",
+        padding: "10px",
+        boxSizing: "border-box",
+        backgroundColor: "white",
+        color: "black",
+        fontSize: "16px",
+    };
+
     useEffect(() => {
         if (!from || !to) return;
 
@@ -90,12 +100,44 @@ function EdgeForm({
                 border: "1px solid #ccc",
                 borderRadius: "8px",
                 zIndex: 1000,
-                width: "320px",
+                width: "min(320px, calc(100vw - 24px))",
+                boxSizing: "border-box",
+                maxHeight: "80dvh",
+                overflowY: "auto",
             }}
         >
-            <h2>
-                {editingEdge ? "Edge編集" : "Edge追加"}
-            </h2>
+            <div
+                style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: "20px",
+                }}
+            >
+                <h2
+                    style={{
+                        margin: 0,
+                        fontSize: "18px",
+                    }}
+                >
+                    {editingEdge ? "Edge編集" : "Edge追加"}
+                </h2>
+
+                <button
+                    type="button"
+                    onClick={onClose}
+                    style={{
+                        border: "none",
+                        background: "transparent",
+                        fontSize: "22px",
+                        cursor: "pointer",
+                        lineHeight: 1,
+                        padding: "2px 4px",
+                    }}
+                >
+                    ×
+                </button>
+            </div>
 
             <div style={{ marginBottom: "12px" }}>
                 <label>From</label>
@@ -103,13 +145,7 @@ function EdgeForm({
                 <select
                     value={from}
                     onChange={(e) => setFrom(e.target.value)}
-                    style={{
-                        display: "block",
-                        width: "100%",
-                        padding: "6px",
-                        backgroundColor: "white",
-                        color: "black",
-                    }}
+                    style={fieldStyle}
                 >
                     <option value="">選択してください</option>
 
@@ -134,13 +170,7 @@ function EdgeForm({
                 <select
                     value={to}
                     onChange={(e) => setTo(e.target.value)}
-                    style={{
-                        display: "block",
-                        width: "100%",
-                        padding: "6px",
-                        backgroundColor: "white",
-                        color: "black",
-                    }}
+                    style={fieldStyle}
                 >
                     <option value="">選択してください</option>
 
@@ -166,12 +196,7 @@ function EdgeForm({
                     type="number"
                     value={distance}
                     onChange={(e) => setDistance(e.target.value)}
-                    style={{
-                        display: "block",
-                        width: "100%",
-                        padding: "6px",
-                        boxSizing: "border-box",
-                    }}
+                    style={fieldStyle}
                 />
             </div>
 
@@ -182,12 +207,7 @@ function EdgeForm({
                     type="number"
                     value={walkingTime}
                     onChange={(e) => setWalkingTime(e.target.value)}
-                    style={{
-                        display: "block",
-                        width: "100%",
-                        padding: "6px",
-                        boxSizing: "border-box",
-                    }}
+                    style={fieldStyle}
                 />
             </div>
 
@@ -197,13 +217,7 @@ function EdgeForm({
                 <select
                     value={movementType}
                     onChange={(e) => setMovementType(e.target.value)}
-                    style={{
-                        display: "block",
-                        width: "100%",
-                        padding: "6px",
-                        backgroundColor: "white",
-                        color: "black",
-                    }}
+                    style={fieldStyle}
                 >
                     <option value="level">平面</option>
                     <option value="stairs">階段</option>
@@ -221,11 +235,8 @@ function EdgeForm({
                     onChange={(e) => setRoadContext(e.target.value)}
                     disabled={isRoadContextFixed}
                     style={{
-                        display: "block",
-                        width: "100%",
-                        padding: "6px",
-                        backgroundColor: "white",
-                        color: "black",
+                        ...fieldStyle,
+                        opacity: isRoadContextFixed ? 0.65 : 1,
                     }}
                 >
                     <option value="unknown">未確認</option>
