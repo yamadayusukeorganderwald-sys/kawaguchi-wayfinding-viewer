@@ -104,6 +104,25 @@ function MapViewer({
     }, [onBackgroundClick]);
 
     useEffect(() => {
+        const viewer = viewerRef.current;
+
+        if (!viewer || viewer.isDestroyed()) return;
+
+        const controller =
+            viewer.scene.screenSpaceCameraController;
+
+        const isSplitting =
+            edgeSplitMode === "selectingOnEdge" ||
+            edgeSplitMode === "placingNewPoint";
+
+        controller.enableRotate = !isSplitting;
+        controller.enableTranslate = !isSplitting;
+        controller.enableZoom = !isSplitting;
+        controller.enableTilt = !isSplitting;
+        controller.enableLook = !isSplitting;
+    }, [edgeSplitMode]);
+
+    useEffect(() => {
         const viewer = new Cesium.Viewer(cesiumContainer.current, {
             animation: false,
             timeline: false,
