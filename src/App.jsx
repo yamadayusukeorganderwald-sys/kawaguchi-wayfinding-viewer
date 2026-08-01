@@ -6,6 +6,7 @@ import PlaceForm from "./components/PlaceForm";
 import EdgeList from "./components/EdgeList";
 import EdgeForm from "./components/EdgeForm";
 import MobileBottomBar from "./components/MobileBottomBar";
+import MobileToolbar from "./components/MobileToolbar";
 
 
 
@@ -88,6 +89,8 @@ function App() {
   const [splitTargetEdge, setSplitTargetEdge] = useState(null);
   const [splitPreviewPosition, setSplitPreviewPosition] = useState(null);
 
+  const [cameraResetRequest, setCameraResetRequest] = useState(0);
+
   const [showMobileDetails, setShowMobileDetails] = useState(false);
 
   const [isMobile, setIsMobile] = useState(
@@ -147,6 +150,14 @@ function App() {
     loadData();
   }, []);
 
+  useEffect(() => {
+    if (!isMobile) return;
+    if (!routeAnchor || !place) return;
+    if (routeAnchor.id === place.id) return;
+
+    setShowRoute(true);
+  }, [isMobile, routeAnchor, place]);
+
   const closePlaceForm = () => {
     setShowPlaceForm(false);
     setEditingPlace(null);
@@ -192,6 +203,26 @@ function App() {
     }
 
     setShowEdgeForm(true);
+  };
+
+  const handleMobileAdd = () => {
+    const canCreateEdge =
+      routeAnchor &&
+      place &&
+      routeAnchor.id !== place.id;
+
+    if (canCreateEdge) {
+      handleOpenEdgeForm();
+      return;
+    }
+
+    setEditingPlace(null);
+    setShowPlaceForm(true);
+  };
+
+  const handleClearRoute = () => {
+    setRouteAnchor(null);
+    setShowRoute(false);
   };
 
   const handleEdgeClick = (edge) => {
@@ -608,6 +639,7 @@ function App() {
         splitPreviewPosition={splitPreviewPosition}
         setSplitPreviewPosition={setSplitPreviewPosition}
         onConfirmEdgeSplit={handleConfirmEdgeSplit}
+        cameraResetRequest={cameraResetRequest}
         onBackgroundClick={() => {
           if (isMobile) {
             setShowMobileDetails(false);
@@ -633,28 +665,58 @@ function App() {
         />
       )}
 
-      <EdgeList
-        edges={edgeList}
-        places={placeList}
-        setShowEdgeForm={setShowEdgeForm}
-        setEditingEdge={setEditingEdge}
-        onOpenEdgeForm={handleOpenEdgeForm}
-        onDeleteEdge={handleDeleteEdge}
-        setShowPlaceForm={setShowPlaceForm}
-        setEditingPlace={setEditingPlace}
+      {isMobile && (
+        <MobileToolbar
+          canSplitEdge={Boolean(selectedEdge)}
+          isSplittingEdge={edgeSplitMode !== "idle"}
 
-        place={place}
-        routeAnchor={routeAnchor}
-        setRouteAnchor={setRouteAnchor}
-        showRoute={showRoute}
-        setShowRoute={setShowRoute}
-        isMobile={isMobile}
+          hasRouteAnchor={Boolean(routeAnchor)}
+          showRoute={showRoute}
 
-        selectedEdge={selectedEdge}
-        edgeSplitMode={edgeSplitMode}
-        onStartEdgeSplit={handleStartEdgeSplit}
-        onCancelEdgeSplit={handleCancelEdgeSplit}
-      />
+          onAdd={handleMobileAdd}
+
+          onSplitEdge={handleStartEdgeSplit}
+          onCancelSplit={handleCancelEdgeSplit}
+
+          onSetRouteAnchor={() => {
+            if (!place) return;
+
+            setRouteAnchor(place);
+            setShowRoute(false);
+          }}
+
+          onClearRoute={handleClearRoute}
+
+          onResetCamera={() => {
+            setCameraResetRequest((current) => current + 1);
+          }}
+        />
+      )}
+
+      {!isMobile && (
+        <EdgeList
+          edges={edgeList}
+          places={placeList}
+          setShowEdgeForm={setShowEdgeForm}
+          setEditingEdge={setEditingEdge}
+          onOpenEdgeForm={handleOpenEdgeForm}
+          onDeleteEdge={handleDeleteEdge}
+          setShowPlaceForm={setShowPlaceForm}
+          setEditingPlace={setEditingPlace}
+
+          place={place}
+          routeAnchor={routeAnchor}
+          setRouteAnchor={setRouteAnchor}
+          showRoute={showRoute}
+          setShowRoute={setShowRoute}
+          isMobile={isMobile}
+
+          selectedEdge={selectedEdge}
+          edgeSplitMode={edgeSplitMode}
+          onStartEdgeSplit={handleStartEdgeSplit}
+          onCancelEdgeSplit={handleCancelEdgeSplit}
+        />
+      )}
 
       {showPlaceForm && (
         <PlaceForm

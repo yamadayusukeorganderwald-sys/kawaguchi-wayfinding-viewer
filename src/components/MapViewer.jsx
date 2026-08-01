@@ -51,6 +51,7 @@ function MapViewer({
     selectedEdge,
     isMobile,
     onBackgroundClick,
+    cameraResetRequest,
 
     edgeSplitMode,
     setEdgeSplitMode,
@@ -1042,6 +1043,12 @@ function MapViewer({
         );
     };
 
+    useEffect(() => {
+        if (cameraResetRequest === 0) return;
+
+        focusSelectedPlace();
+    }, [cameraResetRequest]);
+
     return (
         <div
             style={{
@@ -1059,27 +1066,29 @@ function MapViewer({
                 }}
             />
 
-            <button
-                type="button"
-                onClick={focusSelectedPlace}
-                title="選択地点に戻る"
-                style={{
-                    position: "absolute",
-                    right: isMobile ? "16px" : "24px",
-                    bottom: isMobile ? "24px" : "32px",
-                    width: "48px",
-                    height: "48px",
-                    borderRadius: "50%",
-                    border: "none",
-                    background: "rgba(255,255,255,0.95)",
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
-                    fontSize: "22px",
-                    cursor: "pointer",
-                    zIndex: 20,
-                }}
-            >
-                ◎
-            </button>
+            {!isMobile && (
+                <button
+                    type="button"
+                    onClick={focusSelectedPlace}
+                    title="選択地点に戻る"
+                    style={{
+                        position: "absolute",
+                        right: "24px",
+                        bottom: "32px",
+                        width: "48px",
+                        height: "48px",
+                        borderRadius: "50%",
+                        border: "none",
+                        background: "rgba(255,255,255,0.95)",
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+                        fontSize: "22px",
+                        cursor: "pointer",
+                        zIndex: 20,
+                    }}
+                >
+                    ◎
+                </button>
+            )}
         </div>
     );
 }

@@ -62,7 +62,7 @@ function MobileBottomBar({
         position: "absolute",
         left: 0,
         right: 0,
-        bottom: 0,
+        bottom: "52px",
         minHeight: "58px",
         padding: "8px 10px",
         boxSizing: "border-box",
@@ -91,7 +91,7 @@ function MobileBottomBar({
             fontWeight: 600,
           }}
         >
-          川口駅 Wayfinding Viewer        β
+          Wayfinding Viewer        β
         </div>
 
         <strong
