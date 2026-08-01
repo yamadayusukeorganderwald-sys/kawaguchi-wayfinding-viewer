@@ -90,6 +90,7 @@ function App() {
   const [splitPreviewPosition, setSplitPreviewPosition] = useState(null);
 
   const [cameraResetRequest, setCameraResetRequest] = useState(0);
+  const [skipCameraMoveRequest, setSkipCameraMoveRequest] = useState(0);
 
   const [showMobileDetails, setShowMobileDetails] = useState(false);
 
@@ -329,7 +330,8 @@ function App() {
     }
 
     if (place?.id === targetPlace.id) {
-      setPlace(null);
+      setSkipCameraMoveRequest((current) => current + 1);
+      setPlace(updatedPlaces[0] ?? null);
     }
 
     closePlaceForm();
@@ -632,6 +634,7 @@ function App() {
         onEdgeClick={handleEdgeClick}
         selectedEdge={selectedEdge}
         isMobile={isMobile}
+        skipCameraMoveRequest={skipCameraMoveRequest}
 
         edgeSplitMode={edgeSplitMode}
         setEdgeSplitMode={setEdgeSplitMode}

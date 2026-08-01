@@ -52,6 +52,7 @@ function MapViewer({
     isMobile,
     onBackgroundClick,
     cameraResetRequest,
+    skipCameraMoveRequest,
 
     edgeSplitMode,
     setEdgeSplitMode,
@@ -78,6 +79,7 @@ function MapViewer({
     const onConfirmEdgeSplitRef = useRef(onConfirmEdgeSplit);
     const onBackgroundClickRef = useRef(onBackgroundClick);
     const previousPlaceIdRef = useRef(place?.id ?? null);
+    const lastSkipCameraMoveRequestRef = useRef(skipCameraMoveRequest);
 
     useEffect(() => {
         edgeSplitModeRef.current = edgeSplitMode;
@@ -627,6 +629,19 @@ function MapViewer({
         const viewer = viewerRef.current;
 
         if (!viewer || viewer.isDestroyed()) return;
+        if (!place) return;
+
+        const shouldSkipCameraMove =
+            lastSkipCameraMoveRequestRef.current !==
+            skipCameraMoveRequest;
+
+        if (shouldSkipCameraMove) {
+            lastSkipCameraMoveRequestRef.current =
+                skipCameraMoveRequest;
+
+            previousPlaceIdRef.current = place.id;
+            return;
+        }
 
         // 同じ地点ではカメラを動かさない
         if (previousPlaceIdRef.current === place.id) {
