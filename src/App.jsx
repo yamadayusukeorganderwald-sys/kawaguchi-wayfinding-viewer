@@ -329,7 +329,7 @@ function App() {
     }
 
     if (place?.id === targetPlace.id) {
-      setPlace(updatedPlaces[0] ?? null);
+      setPlace(null);
     }
 
     closePlaceForm();
@@ -641,6 +641,8 @@ function App() {
         onConfirmEdgeSplit={handleConfirmEdgeSplit}
         cameraResetRequest={cameraResetRequest}
         onBackgroundClick={() => {
+          setSelectedEdge(null);
+
           if (isMobile) {
             setShowMobileDetails(false);
           }
