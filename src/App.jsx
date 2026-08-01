@@ -5,6 +5,7 @@ import MapViewer from "./components/MapViewer";
 import PlaceForm from "./components/PlaceForm";
 import EdgeList from "./components/EdgeList";
 import EdgeForm from "./components/EdgeForm";
+import MobileBottomBar from "./components/MobileBottomBar";
 
 
 
@@ -86,6 +87,8 @@ function App() {
   const [edgeSplitMode, setEdgeSplitMode] = useState("idle");
   const [splitTargetEdge, setSplitTargetEdge] = useState(null);
   const [splitPreviewPosition, setSplitPreviewPosition] = useState(null);
+
+  const [showMobileDetails, setShowMobileDetails] = useState(false);
 
   const [isMobile, setIsMobile] = useState(
     () => window.matchMedia("(max-width: 767px)").matches
@@ -548,40 +551,39 @@ function App() {
         overflow: "hidden",
       }}
     >
-      <div
-        style={{
-          width: isMobile ? "60%" : "280px",
-          height: isMobile ? "auto" : "100%",
-          position: isMobile ? "absolute" : "relative",
-          left: 0,
-          top: 0,
-          zIndex: 10,
-        }}
-      >
-        <Sidebar
-          place={place}
-          setPlace={setPlace}
-          routeAnchor={routeAnchor}
-          setRouteAnchor={setRouteAnchor}
-          showRoute={showRoute}
-          setShowRoute={setShowRoute}
-          places={placeList}
-          setShowPlaceForm={setShowPlaceForm}
-          setEditingPlace={setEditingPlace}
-          onDeletePlace={handleDeletePlace}
-          isMobile={isMobile}
-
-          selectedEdge={selectedEdge}
-          setSelectedEdge={setSelectedEdge}
-          onEditEdge={(edge) => {
-            setEditingEdge(edge);
-            setInitialEdge(null);
-            setShowEdgeForm(true);
+      {!isMobile && (
+        <div
+          style={{
+            width: "280px",
+            height: "100%",
+            position: "relative",
+            zIndex: 10,
           }}
-          onDeleteEdge={handleDeleteEdge}
-        />
-      </div>
+        >
+          <Sidebar
+            place={place}
+            setPlace={setPlace}
+            routeAnchor={routeAnchor}
+            setRouteAnchor={setRouteAnchor}
+            showRoute={showRoute}
+            setShowRoute={setShowRoute}
+            places={placeList}
+            setShowPlaceForm={setShowPlaceForm}
+            setEditingPlace={setEditingPlace}
+            onDeletePlace={handleDeletePlace}
+            isMobile={isMobile}
 
+            selectedEdge={selectedEdge}
+            setSelectedEdge={setSelectedEdge}
+            onEditEdge={(edge) => {
+              setEditingEdge(edge);
+              setInitialEdge(null);
+              setShowEdgeForm(true);
+            }}
+            onDeleteEdge={handleDeleteEdge}
+          />
+        </div>
+      )}
       <MapViewer
         places={placeList}
         edges={edgeList}
@@ -606,7 +608,30 @@ function App() {
         splitPreviewPosition={splitPreviewPosition}
         setSplitPreviewPosition={setSplitPreviewPosition}
         onConfirmEdgeSplit={handleConfirmEdgeSplit}
+        onBackgroundClick={() => {
+          if (isMobile) {
+            setShowMobileDetails(false);
+          }
+        }}
       />
+
+      {isMobile && (
+        <MobileBottomBar
+          place={place}
+          selectedEdge={selectedEdge}
+          setShowPlaceForm={setShowPlaceForm}
+          setEditingPlace={setEditingPlace}
+          onDeletePlace={handleDeletePlace}
+          onEditEdge={(edge) => {
+            setEditingEdge(edge);
+            setInitialEdge(null);
+            setShowEdgeForm(true);
+          }}
+          onDeleteEdge={handleDeleteEdge}
+          showDetails={showMobileDetails}
+          setShowDetails={setShowMobileDetails}
+        />
+      )}
 
       <EdgeList
         edges={edgeList}

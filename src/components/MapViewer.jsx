@@ -50,6 +50,7 @@ function MapViewer({
     onEdgeClick,
     selectedEdge,
     isMobile,
+    onBackgroundClick,
 
     edgeSplitMode,
     setEdgeSplitMode,
@@ -74,6 +75,7 @@ function MapViewer({
     const placesRef = useRef(places);
     const splitEdgePreviewRefs = useRef([]);
     const onConfirmEdgeSplitRef = useRef(onConfirmEdgeSplit);
+    const onBackgroundClickRef = useRef(onBackgroundClick);
     const previousPlaceIdRef = useRef(place?.id ?? null);
 
     useEffect(() => {
@@ -95,6 +97,10 @@ function MapViewer({
     useEffect(() => {
         onConfirmEdgeSplitRef.current = onConfirmEdgeSplit;
     }, [onConfirmEdgeSplit]);
+
+    useEffect(() => {
+        onBackgroundClickRef.current = onBackgroundClick;
+    }, [onBackgroundClick]);
 
     useEffect(() => {
         const viewer = new Cesium.Viewer(cesiumContainer.current, {
@@ -227,6 +233,11 @@ function MapViewer({
                 }
 
                 return;
+            }
+
+            // 地点やEdgeではない、地図背景をクリックした場合
+            if (onBackgroundClickRef.current) {
+                onBackgroundClickRef.current();
             }
 
             // 地図上のクリック位置を3D座標として取得
