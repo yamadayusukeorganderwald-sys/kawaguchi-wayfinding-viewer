@@ -108,6 +108,9 @@ function MapViewer({
     const onBackgroundClickRef = useRef(onBackgroundClick);
     const previousPlaceIdRef = useRef(place?.id ?? null);
     const lastSkipCameraMoveRequestRef = useRef(skipCameraMoveRequest);
+    const hasFocusedCurrentPositionRef = useRef(false);
+    const previousCurrentPositionSelectedRef =
+        useRef(false);
 
     useEffect(() => {
         edgeSplitModeRef.current = edgeSplitMode;
@@ -515,6 +518,8 @@ function MapViewer({
 
     useEffect(() => {
         if (!gpsEnabled) {
+            hasFocusedCurrentPositionRef.current = false;
+
             if (gpsWatchIdRef.current !== null) {
                 navigator.geolocation.clearWatch(gpsWatchIdRef.current);
                 gpsWatchIdRef.current = null;
@@ -533,14 +538,25 @@ function MapViewer({
         gpsWatchIdRef.current = navigator.geolocation.watchPosition(
             (position) => {
                 console.log(position.coords);
-                setCurrentPosition({
+
+                const nextPosition = {
                     longitude: position.coords.longitude,
                     latitude: position.coords.latitude,
                     accuracy: position.coords.accuracy,
                     heading: position.coords.heading,
                     speed: position.coords.speed,
                     timestamp: position.timestamp,
-                });
+                };
+
+                setCurrentPosition(nextPosition);
+
+                if (!hasFocusedCurrentPositionRef.current) {
+                    hasFocusedCurrentPositionRef.current = true;
+
+                    onCurrentPositionClickRef.current?.(
+                        nextPosition
+                    );
+                }
             },
             (error) => {
                 console.error("GPS取得に失敗:", error);
@@ -668,6 +684,44 @@ function MapViewer({
             currentPosition;
 
     }, [gpsEnabled, currentPosition]);
+
+    useEffect(() => {
+        const viewer = viewerRef.current;
+
+        const becameSelected =
+            !previousCurrentPositionSelectedRef.current &&
+            isCurrentPositionSelected;
+
+        previousCurrentPositionSelectedRef.current =
+            isCurrentPositionSelected;
+
+        if (!becameSelected) return;
+        if (!viewer || viewer.isDestroyed()) return;
+        if (!currentPosition) return;
+
+        const targetPosition = Cesium.Cartesian3.fromDegrees(
+            currentPosition.longitude,
+            currentPosition.latitude,
+            4
+        );
+
+        viewer.camera.cancelFlight();
+
+        viewer.camera.flyToBoundingSphere(
+            new Cesium.BoundingSphere(targetPosition, 1),
+            {
+                offset: new Cesium.HeadingPitchRange(
+                    Cesium.Math.toRadians(315),
+                    Cesium.Math.toRadians(-45),
+                    220
+                ),
+                duration: 1.2,
+            }
+        );
+    }, [
+        isCurrentPositionSelected,
+        currentPosition,
+    ]);
 
     useEffect(() => {
         const viewer = viewerRef.current;

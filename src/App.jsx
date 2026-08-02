@@ -7,6 +7,7 @@ import EdgeList from "./components/EdgeList";
 import EdgeForm from "./components/EdgeForm";
 import MobileBottomBar from "./components/MobileBottomBar";
 import MobileToolbar from "./components/MobileToolbar";
+import EdgeConnectionModal from "./components/EdgeConnectionModal";
 
 
 
@@ -96,6 +97,8 @@ function App() {
   const [currentPosition, setCurrentPosition] = useState(null);
   const [isCurrentPositionSelected, setIsCurrentPositionSelected] =
     useState(false);
+  const [edgeConnectionPlace, setEdgeConnectionPlace] =
+    useState(null);
 
   const [showMobileDetails, setShowMobileDetails] = useState(false);
 
@@ -211,6 +214,19 @@ function App() {
     setShowEdgeForm(true);
   };
 
+  const handleOpenPlaceForm = () => {
+    setEditingPlace(null);
+
+    if (isCurrentPositionSelected && currentPosition) {
+      setClickedPosition({
+        longitude: currentPosition.longitude,
+        latitude: currentPosition.latitude,
+        height: 0,
+      });
+    }
+    setShowPlaceForm(true);
+  };
+
   const handleMobileAdd = () => {
     const canCreateEdge =
       routeAnchor &&
@@ -222,8 +238,7 @@ function App() {
       return;
     }
 
-    setEditingPlace(null);
-    setShowPlaceForm(true);
+    handleOpenPlaceForm();
   };
 
   const handleClearRoute = () => {
@@ -233,6 +248,8 @@ function App() {
 
   const handleEdgeClick = (edge) => {
     setSelectedEdge(edge);
+    setIsCurrentPositionSelected(false);
+    setClickedPosition(null);
   };
 
   const handleStartEdgeSplit = () => {
@@ -253,9 +270,14 @@ function App() {
   };
 
   const handleAddPlace = async (newPlace) => {
+    const {
+      createEdges,
+      ...placeData
+    } = newPlace;
+
     const { data, error } = await supabase
       .from("places")
-      .insert(newPlace)
+      .insert(placeData)
       .select()
       .single();
 
@@ -265,8 +287,17 @@ function App() {
       return;
     }
 
-    setPlaceList((currentPlaces) => [...currentPlaces, data]);
+    setPlaceList((currentPlaces) => [
+      ...currentPlaces,
+      data,
+    ]);
+
     setPlace(data);
+
+    if (createEdges) {
+      setEdgeConnectionPlace(data);
+    }
+
     closePlaceForm();
   };
 
@@ -610,6 +641,7 @@ function App() {
             setEditingPlace={setEditingPlace}
             onDeletePlace={handleDeletePlace}
             isMobile={isMobile}
+            clickedPosition={clickedPosition}
 
             selectedEdge={selectedEdge}
             setSelectedEdge={setSelectedEdge}
@@ -619,6 +651,8 @@ function App() {
               setShowEdgeForm(true);
             }}
             onDeleteEdge={handleDeleteEdge}
+            isCurrentPositionSelected={isCurrentPositionSelected}
+            currentPosition={currentPosition}
           />
         </div>
       )}
@@ -630,6 +664,7 @@ function App() {
           setPlace(selectedPlace);
           setSelectedEdge(null);
           setIsCurrentPositionSelected(false);
+          setClickedPosition(null);
         }}
         showRoute={showRoute}
         setShowRoute={setShowRoute}
@@ -648,6 +683,7 @@ function App() {
         onCurrentPositionClick={() => {
           setIsCurrentPositionSelected(true);
           setSelectedEdge(null);
+          setClickedPosition(null);
         }}
 
         skipCameraMoveRequest={skipCameraMoveRequest}
@@ -661,6 +697,7 @@ function App() {
         cameraResetRequest={cameraResetRequest}
         onBackgroundClick={() => {
           setSelectedEdge(null);
+          setIsCurrentPositionSelected(false);
 
           if (isMobile) {
             setShowMobileDetails(false);
@@ -677,6 +714,7 @@ function App() {
           setShowPlaceForm={setShowPlaceForm}
           setEditingPlace={setEditingPlace}
           onDeletePlace={handleDeletePlace}
+          clickedPosition={clickedPosition}
           onEditEdge={(edge) => {
             setEditingEdge(edge);
             setInitialEdge(null);
@@ -727,6 +765,8 @@ function App() {
           setShowPlaceForm={setShowPlaceForm}
           setEditingPlace={setEditingPlace}
 
+          onOpenPlaceForm={handleOpenPlaceForm}
+
           place={place}
           routeAnchor={routeAnchor}
           setRouteAnchor={setRouteAnchor}
@@ -761,6 +801,74 @@ function App() {
           onClose={closeEdgeForm}
         />
       )}
+
+      {edgeConnectionPlace && (
+        <EdgeConnectionModal
+          newPlace={edgeConnectionPlace}
+          places={placeList}
+          onConfirm={async (selectedPlaceIds) => {
+            if (!edgeConnectionPlace) return;
+
+            const newEdges = selectedPlaceIds.map((placeId) => {
+              const targetPlace = placeList.find(
+                (place) => place.id === placeId
+              );
+
+              if (!targetPlace) return null;
+
+              const distance = calculateDistanceMeters(
+                edgeConnectionPlace.longitude,
+                edgeConnectionPlace.latitude,
+                targetPlace.longitude,
+                targetPlace.latitude
+              );
+
+              const walkingTime = Math.max(
+                1,
+                Math.round(distance / 1.2)
+              );
+
+              return {
+                id: crypto.randomUUID(),
+                from: edgeConnectionPlace.id,
+                to: targetPlace.id,
+                distance,
+                walkingTime,
+                movement_type: "walk",
+                road_context: "pedestrian_only",
+                bidirectional: true,
+              };
+            }).filter(Boolean);
+
+            if (newEdges.length === 0) {
+              setEdgeConnectionPlace(null);
+              return;
+            }
+
+            const { data, error } = await supabase
+              .from("edges")
+              .insert(newEdges.map(toDatabaseEdge))
+              .select();
+
+            if (error) {
+              console.error(error);
+              alert("Edge登録に失敗しました");
+              return;
+            }
+
+            setEdgeList((currentEdges) => [
+              ...currentEdges,
+              ...data.map(toAppEdge),
+            ]);
+
+            setEdgeConnectionPlace(null);
+          }}
+          onSkip={() => {
+            setEdgeConnectionPlace(null);
+          }}
+        />
+      )}
+
     </div>
   );
 }

@@ -19,9 +19,15 @@ function MobileBottomBar({
   setShowDetails,
   isCurrentPositionSelected,
   currentPosition,
+  clickedPosition,
 }) {
 
-  if (!place && !selectedEdge && !isCurrentPositionSelected) {
+  if (
+    !place &&
+    !selectedEdge &&
+    !isCurrentPositionSelected &&
+    !clickedPosition
+  ) {
     return null;
   }
 
@@ -44,15 +50,29 @@ function MobileBottomBar({
     onDeletePlace(place);
   };
 
+  const isUnregisteredPosition =
+    Boolean(clickedPosition) &&
+    !isCurrentPositionSelected &&
+    !selectedEdge;
+
   const displayName = isCurrentPositionSelected
     ? "現在地"
     : selectedEdge
       ? "Edge"
-      : place?.name ?? "地点未選択";
+      : isUnregisteredPosition
+        ? "未登録地点"
+        : place?.name ?? "地点未選択";
 
   const displayDescription = isCurrentPositionSelected
     ? "今いるところ"
-    : null;
+    : isUnregisteredPosition
+      ? "地図上で選択した位置"
+      : null;
+
+  const detailsOpen =
+    isCurrentPositionSelected ||
+    isUnregisteredPosition ||
+    showDetails;
 
   const actionButtonStyle = {
     border: "none",
@@ -124,7 +144,7 @@ function MobileBottomBar({
           </div>
         )}
       </div>
-      {!isCurrentPositionSelected && (
+      {!isCurrentPositionSelected && !isUnregisteredPosition && (
         <div
           style={{
             display: "flex",
@@ -174,110 +194,150 @@ function MobileBottomBar({
         </div>
       )}
 
-      {!isCurrentPositionSelected && (
-        <div
-          style={{
-            width: "100%",
-            boxSizing: "border-box",
 
-            maxHeight: showDetails ? "55dvh" : "0",
-            opacity: showDetails ? 1 : 0,
+      <div
+        style={{
+          width: "100%",
+          boxSizing: "border-box",
 
-            marginTop: showDetails ? "8px" : "0",
-            paddingTop: showDetails ? "8px" : "0",
+          maxHeight: detailsOpen ? "55dvh" : "0",
+          opacity: detailsOpen ? 1 : 0,
 
-            borderTop: showDetails
-              ? "1px solid #ddd"
-              : "1px solid transparent",
+          marginTop: detailsOpen ? "8px" : "0",
+          paddingTop: detailsOpen ? "8px" : "0",
 
-            overflowY: showDetails ? "auto" : "hidden",
-            overflowX: "hidden",
+          borderTop: detailsOpen
+            ? "1px solid #ddd"
+            : "1px solid transparent",
 
-            transition:
-              "max-height 0.3s ease, opacity 0.2s ease, margin-top 0.3s ease, padding-top 0.3s ease",
-          }}
-        >
-          {selectedEdge ? (
-            <div style={{ fontSize: "13px", lineHeight: 1.6 }}>
-              <div>
-                <strong>距離：</strong>
-                {selectedEdge.distance} m
-              </div>
+          overflowY: detailsOpen ? "auto" : "hidden",
+          overflowX: "hidden",
 
-              <div>
-                <strong>徒歩時間：</strong>
-                {selectedEdge.walkingTime} 秒
-              </div>
-
-              <div>
-                <strong>移動方法：</strong>
-                {selectedEdge.movement_type || "未設定"}
-              </div>
-
-              <div>
-                <strong>道路空間との関係：</strong>
-                {selectedEdge.road_context || "未設定"}
-              </div>
-            </div>
-          ) : (
+          transition:
+            "max-height 0.3s ease, opacity 0.2s ease, margin-top 0.3s ease, padding-top 0.3s ease",
+        }}
+      >
+        {isCurrentPositionSelected ? (
+          <div style={{ fontSize: "13px", lineHeight: 1.7 }}>
             <div>
-              {place.image && (
-                <img
-                  src={place.image}
-                  alt={place.name}
-                  style={{
-                    width: "100%",
-                    maxHeight: "180px",
-                    objectFit: "cover",
-                    borderRadius: "8px",
-                    marginBottom: "12px",
-                    display: "block",
-                  }}
-                />
-              )}
-
-              <section style={{ marginBottom: "12px" }}>
-                <strong style={{ fontSize: "13px" }}>観察</strong>
-                <p
-                  style={{
-                    margin: "4px 0 0",
-                    fontSize: "12px",
-                    lineHeight: 1.6,
-                  }}
-                >
-                  {place.observation || "未記入"}
-                </p>
-              </section>
-
-              <section style={{ marginBottom: "12px" }}>
-                <strong style={{ fontSize: "13px" }}>課題</strong>
-                <p
-                  style={{
-                    margin: "4px 0 0",
-                    fontSize: "12px",
-                    lineHeight: 1.6,
-                  }}
-                >
-                  {place.problem || "未記入"}
-                </p>
-              </section>
-
-              <section>
-                <strong style={{ fontSize: "13px" }}>改善案</strong>
-                <p
-                  style={{
-                    margin: "4px 0 0",
-                    fontSize: "12px",
-                    lineHeight: 1.6,
-                  }}
-                >
-                  {place.proposal || "未記入"}
-                </p>
-              </section>
+              <strong>緯度：</strong>
+              {currentPosition?.latitude?.toFixed(6) ?? "取得中"}
             </div>
-          )}
-        </div>
-      )}
+
+            <div>
+              <strong>経度：</strong>
+              {currentPosition?.longitude?.toFixed(6) ?? "取得中"}
+            </div>
+
+            <div>
+              <strong>GPS精度：</strong>
+              {currentPosition?.accuracy != null
+                ? `約${Math.round(currentPosition.accuracy)}m`
+                : "取得中"}
+            </div>
+
+            <div>
+              <strong>状態：</strong>
+              GPSから受信中
+            </div>
+          </div>
+        ) : isUnregisteredPosition ? (
+          <div style={{ fontSize: "13px", lineHeight: 1.7 }}>
+            <div>
+              <strong>緯度：</strong>
+              {clickedPosition?.latitude?.toFixed(6) ?? "未取得"}
+            </div>
+
+            <div>
+              <strong>経度：</strong>
+              {clickedPosition?.longitude?.toFixed(6) ?? "未取得"}
+            </div>
+
+            <div>
+              <strong>状態：</strong>
+              未登録
+            </div>
+          </div>
+        ) : selectedEdge ? (
+          <div style={{ fontSize: "13px", lineHeight: 1.6 }}>
+            <div>
+              <strong>距離：</strong>
+              {selectedEdge.distance} m
+            </div>
+
+            <div>
+              <strong>徒歩時間：</strong>
+              {selectedEdge.walkingTime} 秒
+            </div>
+
+            <div>
+              <strong>移動方法：</strong>
+              {selectedEdge.movement_type || "未設定"}
+            </div>
+
+            <div>
+              <strong>道路空間との関係：</strong>
+              {selectedEdge.road_context || "未設定"}
+            </div>
+          </div>
+        ) : (
+          <div>
+            {place.image && (
+              <img
+                src={place.image}
+                alt={place.name}
+                style={{
+                  width: "100%",
+                  maxHeight: "180px",
+                  objectFit: "cover",
+                  borderRadius: "8px",
+                  marginBottom: "12px",
+                  display: "block",
+                }}
+              />
+            )}
+
+            <section style={{ marginBottom: "12px" }}>
+              <strong style={{ fontSize: "13px" }}>観察</strong>
+              <p
+                style={{
+                  margin: "4px 0 0",
+                  fontSize: "12px",
+                  lineHeight: 1.6,
+                }}
+              >
+                {place.observation || "未記入"}
+              </p>
+            </section>
+
+            <section style={{ marginBottom: "12px" }}>
+              <strong style={{ fontSize: "13px" }}>課題</strong>
+              <p
+                style={{
+                  margin: "4px 0 0",
+                  fontSize: "12px",
+                  lineHeight: 1.6,
+                }}
+              >
+                {place.problem || "未記入"}
+              </p>
+            </section>
+
+            <section>
+              <strong style={{ fontSize: "13px" }}>改善案</strong>
+              <p
+                style={{
+                  margin: "4px 0 0",
+                  fontSize: "12px",
+                  lineHeight: 1.6,
+                }}
+              >
+                {place.proposal || "未記入"}
+              </p>
+            </section>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

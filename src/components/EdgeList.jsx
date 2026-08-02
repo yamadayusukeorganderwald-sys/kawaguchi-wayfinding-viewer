@@ -9,6 +9,7 @@ function EdgeList({
     onDeleteEdge,
     setShowPlaceForm,
     setEditingPlace,
+    onOpenPlaceForm,
     isMobile,
 
     place,
@@ -48,10 +49,7 @@ function EdgeList({
             }}
         >
             <button
-                onClick={() => {
-                    setEditingPlace(null);
-                    setShowPlaceForm(true);
-                }}
+                onClick={onOpenPlaceForm}
                 style={{
                     marginBottom: "8px",
                     width: "100%",

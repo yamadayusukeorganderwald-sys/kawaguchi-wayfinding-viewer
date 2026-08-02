@@ -23,6 +23,11 @@ function Sidebar({
     setSelectedEdge,
     onEditEdge,
     onDeleteEdge,
+
+    isCurrentPositionSelected,
+    currentPosition,
+    clickedPosition,
+
     isMobile,
 }) {
     return (
@@ -94,8 +99,73 @@ function Sidebar({
                     </div>
                 </>
             )}
-            {selectedEdge ? (
+            {isCurrentPositionSelected ? (
+                <>
+                    <h2
+                        style={{
+                            fontSize: "18px",
+                            margin: "14px 0 6px",
+                        }}
+                    >
+                        現在地
+                    </h2>
 
+                    <div
+                        style={{
+                            fontSize: "11px",
+                            color: "#666",
+                            marginBottom: "12px",
+                        }}
+                    >
+                        今いるところ
+                    </div>
+
+                    <section style={{ marginBottom: "12px" }}>
+                        <h3 style={{ fontSize: "12px", margin: "0 0 4px" }}>
+                            緯度
+                        </h3>
+
+                        <p style={{ margin: 0, fontSize: "12px" }}>
+                            {currentPosition?.latitude?.toFixed(6)}
+                        </p>
+                    </section>
+
+                    <section style={{ marginBottom: "12px" }}>
+                        <h3 style={{ fontSize: "12px", margin: "0 0 4px" }}>
+                            経度
+                        </h3>
+
+                        <p style={{ margin: 0, fontSize: "12px" }}>
+                            {currentPosition?.longitude?.toFixed(6)}
+                        </p>
+                    </section>
+
+                    <section style={{ marginBottom: "12px" }}>
+                        <h3 style={{ fontSize: "12px", margin: "0 0 4px" }}>
+                            GPS精度
+                        </h3>
+
+                        <p style={{ margin: 0, fontSize: "12px" }}>
+                            {currentPosition?.accuracy != null
+                                ? `約${Math.round(
+                                    currentPosition.accuracy
+                                )}m`
+                                : "取得中"}
+                        </p>
+                    </section>
+
+                    <section style={{ marginBottom: "12px" }}>
+                        <h3 style={{ fontSize: "12px", margin: "0 0 4px" }}>
+                            状態
+                        </h3>
+
+                        <p style={{ margin: 0, fontSize: "12px" }}>
+                            GPSから受信中
+                        </p>
+                    </section>
+
+                </>
+            ) : selectedEdge ? (
                 <>
                     <h2
                         style={{
@@ -196,7 +266,54 @@ function Sidebar({
                         </p>
                     </section>
                 </>
+            ) : clickedPosition ? (
+                <>
+                    <h2
+                        style={{
+                            fontSize: "18px",
+                            margin: "14px 0 6px",
+                        }}
+                    >
+                        未登録地点
+                    </h2>
 
+                    <div
+                        style={{
+                            fontSize: "11px",
+                            color: "#666",
+                            marginBottom: "12px",
+                        }}
+                    >
+                        地図上で選択した位置
+                    </div>
+
+                    <section style={{ marginBottom: "12px" }}>
+                        <h3 style={{ fontSize: "12px", margin: "0 0 4px" }}>
+                            緯度
+                        </h3>
+                        <p style={{ margin: 0, fontSize: "12px" }}>
+                            {clickedPosition.latitude?.toFixed(6)}
+                        </p>
+                    </section>
+
+                    <section style={{ marginBottom: "12px" }}>
+                        <h3 style={{ fontSize: "12px", margin: "0 0 4px" }}>
+                            経度
+                        </h3>
+                        <p style={{ margin: 0, fontSize: "12px" }}>
+                            {clickedPosition.longitude?.toFixed(6)}
+                        </p>
+                    </section>
+
+                    <section style={{ marginBottom: "12px" }}>
+                        <h3 style={{ fontSize: "12px", margin: "0 0 4px" }}>
+                            状態
+                        </h3>
+                        <p style={{ margin: 0, fontSize: "12px" }}>
+                            未登録
+                        </p>
+                    </section>
+                </>
             ) : (
 
                 <>

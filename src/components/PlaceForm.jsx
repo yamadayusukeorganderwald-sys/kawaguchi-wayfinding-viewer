@@ -64,6 +64,8 @@ function PlaceForm({
 
     const [imageFile, setImageFile] = useState(null);
 
+    const [createEdges, setCreateEdges] = useState(false);
+
     const inputStyle = {
         width: "100%",
         padding: "10px",
@@ -137,6 +139,8 @@ function PlaceForm({
             observation: observation.trim(),
             problem: problem.trim(),
             proposal: proposal.trim(),
+
+            createEdges,
         };
 
         if (editingPlace) {
@@ -192,18 +196,40 @@ function PlaceForm({
                         {editingPlace ? "地点編集" : "地点追加"}
                     </h2>
 
-                    <button
-                        type="button"
-                        onClick={onClose}
+                    <div
                         style={{
-                            border: "none",
-                            background: "transparent",
-                            fontSize: "22px",
-                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
                         }}
                     >
-                        ×
-                    </button>
+                        <button
+                            type="submit"
+                            style={{
+                                padding: "6px 12px",
+                                border: "none",
+                                borderRadius: "6px",
+                                background: "#2196f3",
+                                color: "#fff",
+                                cursor: "pointer",
+                            }}
+                        >
+                            {editingPlace ? "保存" : "追加"}
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            style={{
+                                border: "none",
+                                background: "transparent",
+                                fontSize: "22px",
+                                cursor: "pointer",
+                            }}
+                        >
+                            ×
+                        </button>
+                    </div>
                 </div>
 
                 <input
@@ -213,6 +239,27 @@ function PlaceForm({
                     onChange={(event) => setName(event.target.value)}
                     style={inputStyle}
                 />
+
+                <label
+                    style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        marginBottom: "10px",
+                        cursor: "pointer",
+                        fontSize: "14px",
+                    }}
+                >
+                    <input
+                        type="checkbox"
+                        checked={createEdges}
+                        onChange={(event) =>
+                            setCreateEdges(event.target.checked)
+                        }
+                    />
+
+                    地点登録と同時にエッジも登録する
+                </label>
 
                 <select
                     value={type}
@@ -355,33 +402,6 @@ function PlaceForm({
                         gap: "8px",
                     }}
                 >
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        style={{
-                            padding: "9px 16px",
-                            border: "1px solid #ccc",
-                            borderRadius: "6px",
-                            background: "#fff",
-                            cursor: "pointer",
-                        }}
-                    >
-                        キャンセル
-                    </button>
-
-                    <button
-                        type="submit"
-                        style={{
-                            padding: "9px 16px",
-                            border: "none",
-                            borderRadius: "6px",
-                            background: "#2196f3",
-                            color: "#fff",
-                            cursor: "pointer",
-                        }}
-                    >
-                        {editingPlace ? "保存" : "追加"}
-                    </button>
                 </div>
             </form>
         </div>
