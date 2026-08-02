@@ -36,6 +36,23 @@ const getMovementColor = (movementType) => {
     }
 };
 
+const CURRENT_LOCATION_ICON = `
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <path
+    d="M32 5 L56 55 L32 45 L8 55 Z"
+    fill="#1a73e8"
+    stroke="#ffffff"
+    stroke-width="5"
+    stroke-linejoin="round"
+  />
+</svg>
+`;
+
+const CURRENT_LOCATION_ICON_URL =
+    `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
+        CURRENT_LOCATION_ICON
+    )}`;
+
 function MapViewer({
     places,
     edges,
@@ -53,6 +70,8 @@ function MapViewer({
     onBackgroundClick,
     cameraResetRequest,
     skipCameraMoveRequest,
+    isCurrentPositionSelected,
+    onCurrentPositionClick,
 
     edgeSplitMode,
     setEdgeSplitMode,
@@ -60,9 +79,18 @@ function MapViewer({
     splitPreviewPosition,
     setSplitPreviewPosition,
     onConfirmEdgeSplit,
+    gpsEnabled,
+    setGpsEnabled,
+    currentPosition,
+    setCurrentPosition,
 }) {
     const cesiumContainer = useRef(null);
     const viewerRef = useRef(null);
+    const currentPositionEntityRef = useRef(null);
+    const gpsWatchIdRef = useRef(null);
+    const onCurrentPositionClickRef =
+        useRef(onCurrentPositionClick);
+    const isCurrentPositionSelectedRef = useRef(isCurrentPositionSelected);
     const entitiesRef = useRef([]);
     const edgeEntitiesRef = useRef([]);
     const routeEntitiesRef = useRef([]);
@@ -106,6 +134,16 @@ function MapViewer({
     }, [onBackgroundClick]);
 
     useEffect(() => {
+        onCurrentPositionClickRef.current =
+            onCurrentPositionClick;
+    }, [onCurrentPositionClick]);
+
+    useEffect(() => {
+        isCurrentPositionSelectedRef.current =
+            isCurrentPositionSelected;
+    }, [isCurrentPositionSelected]);
+
+    useEffect(() => {
         const viewer = viewerRef.current;
 
         if (!viewer || viewer.isDestroyed()) return;
@@ -128,6 +166,17 @@ function MapViewer({
         const viewer = new Cesium.Viewer(cesiumContainer.current, {
             animation: false,
             timeline: false,
+
+            homeButton: false,
+            baseLayerPicker: false,
+            navigationHelpButton: false,
+            fullscreenButton: false,
+            geocoder: false,
+            sceneModePicker: false,
+            projectionPicker: false,
+
+            infoBox: false,
+            selectionIndicator: false,
         });
 
         viewerRef.current = viewer;
@@ -241,6 +290,15 @@ function MapViewer({
 
             // クリックした場所にマーカーがあるか確認
             const picked = viewer.scene.pick(click.position);
+
+            // 現在地マーカーをクリック
+            if (picked?.id?.isCurrentPosition) {
+                onCurrentPositionClickRef.current?.(
+                    picked.id.currentPosition
+                );
+
+                return;
+            }
 
             // マーカーをクリックした場合
             if (picked && picked.id && picked.id.place) {
@@ -456,6 +514,162 @@ function MapViewer({
     }, []);
 
     useEffect(() => {
+        if (!gpsEnabled) {
+            if (gpsWatchIdRef.current !== null) {
+                navigator.geolocation.clearWatch(gpsWatchIdRef.current);
+                gpsWatchIdRef.current = null;
+            }
+
+            setCurrentPosition(null);
+            return;
+        }
+
+        if (!navigator.geolocation) {
+            alert("この端末ではGPSを利用できません");
+            setGpsEnabled(false);
+            return;
+        }
+
+        gpsWatchIdRef.current = navigator.geolocation.watchPosition(
+            (position) => {
+                console.log(position.coords);
+                setCurrentPosition({
+                    longitude: position.coords.longitude,
+                    latitude: position.coords.latitude,
+                    accuracy: position.coords.accuracy,
+                    heading: position.coords.heading,
+                    speed: position.coords.speed,
+                    timestamp: position.timestamp,
+                });
+            },
+            (error) => {
+                console.error("GPS取得に失敗:", error);
+
+                if (error.code === error.PERMISSION_DENIED) {
+                    alert("位置情報の利用が許可されていません");
+                } else {
+                    alert("現在位置を取得できませんでした");
+                }
+
+                setGpsEnabled(false);
+            },
+            {
+                enableHighAccuracy: true,
+                maximumAge: 3000,
+                timeout: 10000,
+            }
+        );
+
+        return () => {
+            if (gpsWatchIdRef.current !== null) {
+                navigator.geolocation.clearWatch(gpsWatchIdRef.current);
+                gpsWatchIdRef.current = null;
+            }
+        };
+    }, [gpsEnabled, setCurrentPosition, setGpsEnabled]);
+
+    useEffect(() => {
+        const viewer = viewerRef.current;
+
+        if (!viewer || viewer.isDestroyed()) return;
+
+        // GPS OFF、または座標がまだない場合は現在地表示を消す
+        if (!gpsEnabled || !currentPosition) {
+            if (currentPositionEntityRef.current) {
+                viewer.entities.remove(
+                    currentPositionEntityRef.current
+                );
+
+                currentPositionEntityRef.current = null;
+            }
+
+            return;
+        }
+
+        const getRectangleCoordinates = () => {
+            const center = Cesium.Cartesian3.fromDegrees(
+                currentPosition.longitude,
+                currentPosition.latitude,
+                4
+            );
+
+            const metersPerPixel = viewer.camera.getPixelSize(
+                new Cesium.BoundingSphere(center, 1),
+                viewer.scene.drawingBufferWidth,
+                viewer.scene.drawingBufferHeight
+            );
+
+            const markerPixelSize =
+                isCurrentPositionSelectedRef.current ? 60 : 40;
+
+            const markerSizeMeters =
+                metersPerPixel * markerPixelSize;
+
+            const latitudeOffset =
+                markerSizeMeters / 111320 / 2;
+
+            const longitudeOffset =
+                markerSizeMeters /
+                (
+                    111320 *
+                    Math.cos(
+                        Cesium.Math.toRadians(
+                            currentPosition.latitude
+                        )
+                    )
+                ) /
+                2;
+
+            return Cesium.Rectangle.fromDegrees(
+                currentPosition.longitude - longitudeOffset,
+                currentPosition.latitude - latitudeOffset,
+                currentPosition.longitude + longitudeOffset,
+                currentPosition.latitude + latitudeOffset
+            );
+        };
+
+        // 初回だけEntityを作る
+        if (!currentPositionEntityRef.current) {
+            const currentLocationEntity =
+                viewer.entities.add({
+                    name: "現在地",
+
+                    rectangle: {
+                        coordinates: new Cesium.CallbackProperty(
+                            getRectangleCoordinates,
+                            false
+                        ),
+                        height: 4,
+
+                        material:
+                            new Cesium.ImageMaterialProperty({
+                                image: "/icons/current_location_arrow.svg",
+                                transparent: true,
+                                color: new Cesium.Color(
+                                    1.0,
+                                    1.0,
+                                    1.0,
+                                    0.8
+                                ),
+                            }),
+                    },
+                });
+
+            currentLocationEntity.isCurrentPosition = true;
+            currentLocationEntity.currentPosition =
+                currentPosition;
+
+            currentPositionEntityRef.current =
+                currentLocationEntity;
+
+            return;
+        }
+        currentPositionEntityRef.current.currentPosition =
+            currentPosition;
+
+    }, [gpsEnabled, currentPosition]);
+
+    useEffect(() => {
         const viewer = viewerRef.current;
 
         if (!viewer || viewer.isDestroyed()) return;
@@ -472,6 +686,7 @@ function MapViewer({
             const isRoute = item.type === "route";
             const isJunction = item.type === "junction";
             const isSelected = item.id === place.id;
+            const isStart = routeAnchor?.id === item.id;
 
             const entity = viewer.entities.add({
                 name: item.name,
@@ -520,8 +735,8 @@ function MapViewer({
                 billboard: isJunction
                     ? {
                         image: "/icons/junction.svg",
-                        width: isSelected ? 24 : 20,
-                        height: isSelected ? 24 : 20,
+                        width: isSelected ? 20 : 13,
+                        height: isSelected ? 20 : 13,
                         verticalOrigin: Cesium.VerticalOrigin.CENTER,
                         horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
                         disableDepthTestDistance: Number.POSITIVE_INFINITY,
@@ -531,8 +746,31 @@ function MapViewer({
 
             entity.place = item;
             entitiesRef.current.push(entity);
+
+            if (isStart) {
+                const startMarker = viewer.entities.add({
+                    position: Cesium.Cartesian3.fromDegrees(
+                        item.longitude,
+                        item.latitude,
+                        getLevelHeight(item.level)
+                    ),
+
+                    billboard: {
+                        image: "/icons/start_focus_frame.svg",
+                        width: 48,
+                        height: 48,
+
+                        verticalOrigin: Cesium.VerticalOrigin.CENTER,
+                        horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
+
+                        disableDepthTestDistance: Number.POSITIVE_INFINITY,
+                    },
+                });
+
+                entitiesRef.current.push(startMarker);
+            }
         });
-    }, [places]);
+    }, [places, routeAnchor]);
 
     useEffect(() => {
         const viewer = viewerRef.current;
@@ -584,8 +822,8 @@ function MapViewer({
                         ? Cesium.Color.CYAN.withAlpha(1)
                         : Cesium.Color.WHITE.withAlpha(0.75),
 
-                    width: isSelected ? 8 : 4,
-                    clampToGround: false,
+                    width: isSelected ? 6 : 3,
+                    clampToGround: false
                 },
             });
 
@@ -670,6 +908,9 @@ function MapViewer({
 
 
         entitiesRef.current.forEach((entity) => {
+            // 起点リングなど、placeを持たないEntityは除外
+            if (!entity.place) return;
+
             const isSelected = entity.place.id === place.id;
             const isRoute = entity.place.type === "route";
             const isJunction = entity.place.type === "junction";
@@ -1099,6 +1340,33 @@ function MapViewer({
                     height: "100%",
                 }}
             />
+
+            <button
+                type="button"
+                onClick={() => setGpsEnabled((current) => !current)}
+                title={gpsEnabled ? "GPSをOFFにする" : "GPSをONにする"}
+                style={{
+                    position: "absolute",
+                    top: "16px",
+                    left: "16px",
+                    minWidth: "104px",
+                    height: "42px",
+                    padding: "0 14px",
+                    borderRadius: "21px",
+                    border: "none",
+                    background: gpsEnabled
+                        ? "rgba(30, 136, 229, 0.95)"
+                        : "rgba(255, 255, 255, 0.95)",
+                    color: gpsEnabled ? "#fff" : "#333",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+                    fontSize: "14px",
+                    fontWeight: "bold",
+                    cursor: "pointer",
+                    zIndex: 20,
+                }}
+            >
+                {gpsEnabled ? "● GPS ON" : "○ GPS OFF"}
+            </button>
 
             {!isMobile && (
                 <button

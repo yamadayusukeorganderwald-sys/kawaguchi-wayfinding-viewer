@@ -92,6 +92,11 @@ function App() {
   const [cameraResetRequest, setCameraResetRequest] = useState(0);
   const [skipCameraMoveRequest, setSkipCameraMoveRequest] = useState(0);
 
+  const [gpsEnabled, setGpsEnabled] = useState(false);
+  const [currentPosition, setCurrentPosition] = useState(null);
+  const [isCurrentPositionSelected, setIsCurrentPositionSelected] =
+    useState(false);
+
   const [showMobileDetails, setShowMobileDetails] = useState(false);
 
   const [isMobile, setIsMobile] = useState(
@@ -624,6 +629,7 @@ function App() {
         setPlace={(selectedPlace) => {
           setPlace(selectedPlace);
           setSelectedEdge(null);
+          setIsCurrentPositionSelected(false);
         }}
         showRoute={showRoute}
         setShowRoute={setShowRoute}
@@ -634,6 +640,16 @@ function App() {
         onEdgeClick={handleEdgeClick}
         selectedEdge={selectedEdge}
         isMobile={isMobile}
+        gpsEnabled={gpsEnabled}
+        setGpsEnabled={setGpsEnabled}
+        currentPosition={currentPosition}
+        setCurrentPosition={setCurrentPosition}
+        isCurrentPositionSelected={isCurrentPositionSelected}
+        onCurrentPositionClick={() => {
+          setIsCurrentPositionSelected(true);
+          setSelectedEdge(null);
+        }}
+
         skipCameraMoveRequest={skipCameraMoveRequest}
 
         edgeSplitMode={edgeSplitMode}
@@ -656,6 +672,8 @@ function App() {
         <MobileBottomBar
           place={place}
           selectedEdge={selectedEdge}
+          isCurrentPositionSelected={isCurrentPositionSelected}
+          currentPosition={currentPosition}
           setShowPlaceForm={setShowPlaceForm}
           setEditingPlace={setEditingPlace}
           onDeletePlace={handleDeletePlace}

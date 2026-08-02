@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" fill="none">
+
+  <!-- 黒アウトライン -->
+  <g stroke="#000000" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M22 8H16C11.582 8 8 11.582 8 16V22"></path>
+    <path d="M42 8H48C52.418 8 56 11.582 56 16V22"></path>
+    <path d="M8 42V48C8 52.418 11.582 56 16 56H22"></path>
+    <path d="M56 42V48C56 52.418 52.418 56 48 56H42"></path>
+
+    <path d="M32 5V13"></path>
+    <path d="M32 51V59"></path>
+    <path d="M5 32H13"></path>
+    <path d="M51 32H59"></path>
+  </g>
+
+  <!-- 本体 -->
+  <g stroke="#ff3b30" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M22 8H16C11.582 8 8 11.582 8 16V22"></path>
+    <path d="M42 8H48C52.418 8 56 11.582 56 16V22"></path>
+    <path d="M8 42V48C8 52.418 11.582 56 16 56H22"></path>
+    <path d="M56 42V48C56 52.418 52.418 56 48 56H42"></path>
+
+    <path d="M32 5V13"></path>
+    <path d="M32 51V59"></path>
+    <path d="M5 32H13"></path>
+    <path d="M51 32H59"></path>
+  </g>
+</svg>

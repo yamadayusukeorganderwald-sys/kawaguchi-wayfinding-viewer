@@ -17,8 +17,11 @@ function MobileBottomBar({
   onDeleteEdge,
   showDetails,
   setShowDetails,
+  isCurrentPositionSelected,
+  currentPosition,
 }) {
-  if (!place && !selectedEdge) {
+
+  if (!place && !selectedEdge && !isCurrentPositionSelected) {
     return null;
   }
 
@@ -41,9 +44,15 @@ function MobileBottomBar({
     onDeletePlace(place);
   };
 
-  const displayName = selectedEdge
-    ? "Edge"
-    : place?.name ?? "地点未選択";
+  const displayName = isCurrentPositionSelected
+    ? "現在地"
+    : selectedEdge
+      ? "Edge"
+      : place?.name ?? "地点未選択";
+
+  const displayDescription = isCurrentPositionSelected
+    ? "今いるところ"
+    : null;
 
   const actionButtonStyle = {
     border: "none",
@@ -103,157 +112,172 @@ function MobileBottomBar({
         >
           {displayName}
         </strong>
-      </div>
-
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "flex-start",
-          alignItems: "center",
-          gap: "16px",
-        }}
-      >
-        <button
-          type="button"
-          onClick={handleEdit}
-          style={actionButtonStyle}
-        >
-          <FiEdit2 size={14} />
-          編集
-        </button>
-
-        <button
-          type="button"
-          onClick={handleDelete}
-          style={{
-            ...actionButtonStyle,
-            color: "#c62828",
-          }}
-        >
-          <FiTrash2 size={14} />
-          削除
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setShowDetails(!showDetails)}
-          style={actionButtonStyle}
-        >
-          {showDetails ? (
-            <>
-              <FiChevronUp size={16} />
-              閉じる
-            </>
-          ) : (
-            <>
-              <FiChevronDown size={16} />
-              詳細
-            </>
-          )}
-        </button>
-      </div>
-      <div
-        style={{
-          width: "100%",
-          boxSizing: "border-box",
-
-          maxHeight: showDetails ? "55dvh" : "0",
-          opacity: showDetails ? 1 : 0,
-
-          marginTop: showDetails ? "8px" : "0",
-          paddingTop: showDetails ? "8px" : "0",
-
-          borderTop: showDetails
-            ? "1px solid #ddd"
-            : "1px solid transparent",
-
-          overflowY: showDetails ? "auto" : "hidden",
-          overflowX: "hidden",
-
-          transition:
-            "max-height 0.3s ease, opacity 0.2s ease, margin-top 0.3s ease, padding-top 0.3s ease",
-        }}
-      >
-        {selectedEdge ? (
-          <div style={{ fontSize: "13px", lineHeight: 1.6 }}>
-            <div>
-              <strong>距離：</strong>
-              {selectedEdge.distance} m
-            </div>
-
-            <div>
-              <strong>徒歩時間：</strong>
-              {selectedEdge.walkingTime} 秒
-            </div>
-
-            <div>
-              <strong>移動方法：</strong>
-              {selectedEdge.movement_type || "未設定"}
-            </div>
-
-            <div>
-              <strong>道路空間との関係：</strong>
-              {selectedEdge.road_context || "未設定"}
-            </div>
-          </div>
-        ) : (
-          <div>
-            {place.image && (
-              <img
-                src={place.image}
-                alt={place.name}
-                style={{
-                  width: "100%",
-                  maxHeight: "180px",
-                  objectFit: "cover",
-                  borderRadius: "8px",
-                  marginBottom: "12px",
-                  display: "block",
-                }}
-              />
-            )}
-
-            <section style={{ marginBottom: "12px" }}>
-              <strong style={{ fontSize: "13px" }}>観察</strong>
-              <p
-                style={{
-                  margin: "4px 0 0",
-                  fontSize: "12px",
-                  lineHeight: 1.6,
-                }}
-              >
-                {place.observation || "未記入"}
-              </p>
-            </section>
-
-            <section style={{ marginBottom: "12px" }}>
-              <strong style={{ fontSize: "13px" }}>課題</strong>
-              <p
-                style={{
-                  margin: "4px 0 0",
-                  fontSize: "12px",
-                  lineHeight: 1.6,
-                }}
-              >
-                {place.problem || "未記入"}
-              </p>
-            </section>
-
-            <section>
-              <strong style={{ fontSize: "13px" }}>改善案</strong>
-              <p
-                style={{
-                  margin: "4px 0 0",
-                  fontSize: "12px",
-                  lineHeight: 1.6,
-                }}
-              >
-                {place.proposal || "未記入"}
-              </p>
-            </section>
+        {displayDescription && (
+          <div
+            style={{
+              fontSize: "12px",
+              color: "#666",
+              marginTop: "2px",
+            }}
+          >
+            {displayDescription}
           </div>
         )}
       </div>
+      {!isCurrentPositionSelected && (
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-start",
+            alignItems: "center",
+            gap: "16px",
+          }}
+        >
+          <button
+            type="button"
+            onClick={handleEdit}
+            style={actionButtonStyle}
+          >
+            <FiEdit2 size={14} />
+            編集
+          </button>
+
+          <button
+            type="button"
+            onClick={handleDelete}
+            style={{
+              ...actionButtonStyle,
+              color: "#c62828",
+            }}
+          >
+            <FiTrash2 size={14} />
+            削除
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowDetails(!showDetails)}
+            style={actionButtonStyle}
+          >
+            {showDetails ? (
+              <>
+                <FiChevronUp size={16} />
+                閉じる
+              </>
+            ) : (
+              <>
+                <FiChevronDown size={16} />
+                詳細
+              </>
+            )}
+          </button>
+        </div>
+      )}
+
+      {!isCurrentPositionSelected && (
+        <div
+          style={{
+            width: "100%",
+            boxSizing: "border-box",
+
+            maxHeight: showDetails ? "55dvh" : "0",
+            opacity: showDetails ? 1 : 0,
+
+            marginTop: showDetails ? "8px" : "0",
+            paddingTop: showDetails ? "8px" : "0",
+
+            borderTop: showDetails
+              ? "1px solid #ddd"
+              : "1px solid transparent",
+
+            overflowY: showDetails ? "auto" : "hidden",
+            overflowX: "hidden",
+
+            transition:
+              "max-height 0.3s ease, opacity 0.2s ease, margin-top 0.3s ease, padding-top 0.3s ease",
+          }}
+        >
+          {selectedEdge ? (
+            <div style={{ fontSize: "13px", lineHeight: 1.6 }}>
+              <div>
+                <strong>距離：</strong>
+                {selectedEdge.distance} m
+              </div>
+
+              <div>
+                <strong>徒歩時間：</strong>
+                {selectedEdge.walkingTime} 秒
+              </div>
+
+              <div>
+                <strong>移動方法：</strong>
+                {selectedEdge.movement_type || "未設定"}
+              </div>
+
+              <div>
+                <strong>道路空間との関係：</strong>
+                {selectedEdge.road_context || "未設定"}
+              </div>
+            </div>
+          ) : (
+            <div>
+              {place.image && (
+                <img
+                  src={place.image}
+                  alt={place.name}
+                  style={{
+                    width: "100%",
+                    maxHeight: "180px",
+                    objectFit: "cover",
+                    borderRadius: "8px",
+                    marginBottom: "12px",
+                    display: "block",
+                  }}
+                />
+              )}
+
+              <section style={{ marginBottom: "12px" }}>
+                <strong style={{ fontSize: "13px" }}>観察</strong>
+                <p
+                  style={{
+                    margin: "4px 0 0",
+                    fontSize: "12px",
+                    lineHeight: 1.6,
+                  }}
+                >
+                  {place.observation || "未記入"}
+                </p>
+              </section>
+
+              <section style={{ marginBottom: "12px" }}>
+                <strong style={{ fontSize: "13px" }}>課題</strong>
+                <p
+                  style={{
+                    margin: "4px 0 0",
+                    fontSize: "12px",
+                    lineHeight: 1.6,
+                  }}
+                >
+                  {place.problem || "未記入"}
+                </p>
+              </section>
+
+              <section>
+                <strong style={{ fontSize: "13px" }}>改善案</strong>
+                <p
+                  style={{
+                    margin: "4px 0 0",
+                    fontSize: "12px",
+                    lineHeight: 1.6,
+                  }}
+                >
+                  {place.proposal || "未記入"}
+                </p>
+              </section>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
