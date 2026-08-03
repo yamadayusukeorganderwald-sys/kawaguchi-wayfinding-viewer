@@ -56,9 +56,15 @@ const CURRENT_LOCATION_ICON_URL =
 function MapViewer({
     places,
     edges,
+    discoveries,
+
     place,
     setPlace,
     showRoute,
+
+    setShowDiscoveryForm,
+    setDiscoveryPosition,
+
     setShowRoute,
     routeAnchor,
     setRouteAnchor,
@@ -83,6 +89,7 @@ function MapViewer({
     setGpsEnabled,
     currentPosition,
     setCurrentPosition,
+    setSelectedDiscovery,
 }) {
     const cesiumContainer = useRef(null);
     const viewerRef = useRef(null);
@@ -93,6 +100,7 @@ function MapViewer({
     const isCurrentPositionSelectedRef = useRef(isCurrentPositionSelected);
     const entitiesRef = useRef([]);
     const edgeEntitiesRef = useRef([]);
+    const discoveryEntitiesRef = useRef([]);
     const routeEntitiesRef = useRef([]);
     const clickedMarkerRef = useRef(null);
     const currentPlaceRef = useRef(place);
@@ -106,6 +114,7 @@ function MapViewer({
     const splitEdgePreviewRefs = useRef([]);
     const onConfirmEdgeSplitRef = useRef(onConfirmEdgeSplit);
     const onBackgroundClickRef = useRef(onBackgroundClick);
+    const onMapClickRef = useRef(onMapClick);
     const previousPlaceIdRef = useRef(place?.id ?? null);
     const lastSkipCameraMoveRequestRef = useRef(skipCameraMoveRequest);
     const hasFocusedCurrentPositionRef = useRef(false);
@@ -135,6 +144,10 @@ function MapViewer({
     useEffect(() => {
         onBackgroundClickRef.current = onBackgroundClick;
     }, [onBackgroundClick]);
+
+    useEffect(() => {
+        onMapClickRef.current = onMapClick;
+    }, [onMapClick]);
 
     useEffect(() => {
         onCurrentPositionClickRef.current =
@@ -303,6 +316,12 @@ function MapViewer({
                 return;
             }
 
+            // 🌱 Discoveryをクリック
+            if (picked?.id?.discovery) {
+                setSelectedDiscovery(picked.id.discovery);
+                return;
+            }
+
             // マーカーをクリックした場合
             if (picked && picked.id && picked.id.place) {
                 setPlace(picked.id.place);
@@ -343,15 +362,13 @@ function MapViewer({
             const latitude = Cesium.Math.toDegrees(cartographic.latitude);
             const height = cartographic.height;
 
-            if (onMapClick) {
-                onMapClick({
-                    longitude,
-                    latitude,
-                    height,
-                });
-            }
+            onMapClickRef.current?.({
+                longitude,
+                latitude,
+                height,
+            });
 
-            console.clear();
+            //console.clear();
 
             console.log({
                 longitude,
@@ -512,6 +529,7 @@ function MapViewer({
             entitiesRef.current = [];
             edgeEntitiesRef.current = [];
             routeEntitiesRef.current = [];
+            discoveryEntitiesRef.current = [];
         };
 
     }, []);
@@ -825,6 +843,61 @@ function MapViewer({
             }
         });
     }, [places, routeAnchor]);
+
+    useEffect(() => {
+        const viewer = viewerRef.current;
+
+        if (!viewer || viewer.isDestroyed()) return;
+
+        discoveryEntitiesRef.current.forEach((entity) => {
+            viewer.entities.remove(entity);
+        });
+
+        discoveryEntitiesRef.current = [];
+
+        discoveries.forEach((item) => {
+            if (
+                typeof item.longitude !== "number" ||
+                typeof item.latitude !== "number"
+            ) {
+                console.warn(
+                    "座標が不正なDiscoveryをスキップ:",
+                    item
+                );
+                return;
+            }
+
+            const entity = viewer.entities.add({
+                position: Cesium.Cartesian3.fromDegrees(
+                    item.longitude,
+                    item.latitude,
+                    typeof item.height === "number"
+                        ? item.height
+                        : 0
+                ),
+
+                billboard: {
+                    image: "/icons/discovery_message_sprout_icon.svg",
+                    width: 36,
+                    height: 36,
+                    verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+
+                    disableDepthTestDistance: Number.POSITIVE_INFINITY,
+
+                    // ←追加
+                    distanceDisplayCondition:
+                        new Cesium.DistanceDisplayCondition(
+                            0,
+                            350
+                        ),
+                },
+            });
+
+            entity.discovery = item;
+            discoveryEntitiesRef.current.push(entity);
+        });
+
+    }, [discoveries]);
 
     useEffect(() => {
         const viewer = viewerRef.current;
@@ -1420,6 +1493,67 @@ function MapViewer({
                 }}
             >
                 {gpsEnabled ? "● GPS ON" : "○ GPS OFF"}
+            </button>
+
+            <button
+                type="button"
+                onClick={(event) => {
+                    event.stopPropagation();
+
+                    // GPS ONなら現在地
+                    if (currentPosition) {
+                        setDiscoveryPosition({
+                            longitude: currentPosition.longitude,
+                            latitude: currentPosition.latitude,
+                            height: 2,
+                        });
+
+                        setShowDiscoveryForm(true);
+                        return;
+                    }
+
+                    // GPS OFFなら、最後にタップした未登録地点
+                    if (clickedPosition) {
+                        setDiscoveryPosition({
+                            longitude: clickedPosition.longitude,
+                            latitude: clickedPosition.latitude,
+                            height: clickedPosition.height ?? 0,
+                        });
+
+                        setShowDiscoveryForm(true);
+                        return;
+                    }
+
+                    alert("先に地図上の発見した場所をタップしてください");
+                }}
+                title="発見"
+                style={{
+                    position: "absolute",
+                    right: "16px",
+                    bottom: isMobile ? "64px" : "24px",
+                    width: "64px",
+                    height: "64px",
+                    padding: 0,
+                    border: "none",
+                    borderRadius: "50%",
+                    background: "transparent",
+                    cursor: "pointer",
+                    zIndex: 9999,
+                    touchAction: "manipulation",
+                    pointerEvents: "auto",
+                }}
+            >
+                <img
+                    src="/icons/discovery_sprout_button.svg"
+                    alt="発見"
+                    draggable={false}
+                    style={{
+                        display: "block",
+                        width: "64px",
+                        height: "64px",
+                        pointerEvents: "none",
+                    }}
+                />
             </button>
 
             {!isMobile && (

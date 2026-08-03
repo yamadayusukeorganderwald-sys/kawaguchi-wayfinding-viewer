@@ -1,0 +1,30 @@
+<svg width="64" height="72" viewBox="0 0 64 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Speech-bubble / map-marker outline -->
+  <path
+    d="M32 4C16.536 4 4 16.536 4 32C4 46.39 14.85 58.245 28.8 59.82L32 66L35.2 59.82C49.15 58.245 60 46.39 60 32C60 16.536 47.464 4 32 4Z"
+    fill="white"
+    stroke="#4CAF50"
+    stroke-width="4"
+    stroke-linejoin="round"
+  />
+
+  <!-- Stem -->
+  <path
+    d="M32 45V31"
+    stroke="#4CAF50"
+    stroke-width="4"
+    stroke-linecap="round"
+  />
+
+  <!-- Left leaf -->
+  <path
+    d="M30.8 32.2C24.7 32.1 20.15 28.75 18.7 22.95C24.8 22.4 29.5 25.3 31.35 30.45C31.7 31.35 31.5 32.2 30.8 32.2Z"
+    fill="#4CAF50"
+  />
+
+  <!-- Right leaf -->
+  <path
+    d="M33.2 32.2C39.3 32.1 43.85 28.75 45.3 22.95C39.2 22.4 34.5 25.3 32.65 30.45C32.3 31.35 32.5 32.2 33.2 32.2Z"
+    fill="#4CAF50"
+  />
+</svg>

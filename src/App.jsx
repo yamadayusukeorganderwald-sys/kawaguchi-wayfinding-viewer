@@ -8,8 +8,10 @@ import EdgeForm from "./components/EdgeForm";
 import MobileBottomBar from "./components/MobileBottomBar";
 import MobileToolbar from "./components/MobileToolbar";
 import EdgeConnectionModal from "./components/EdgeConnectionModal";
-
-
+import { loadDiscoveries } from "./data/discoveries";
+import DiscoveryForm from "./components/DiscoveryForm";
+import DiscoveryDetail from "./components/DiscoveryDetail";
+import DiscoveryConnectionModal from "./components/DiscoveryConnectionModal";
 
 const toAppEdge = (edge) => ({
   id: edge.id,
@@ -77,14 +79,20 @@ function App() {
   const [routeAnchor, setRouteAnchor] = useState(null);
 
   const [showPlaceForm, setShowPlaceForm] = useState(false);
+  const [showDiscoveryForm, setShowDiscoveryForm] = useState(false);
   const [clickedPosition, setClickedPosition] = useState(null);
   const [editingPlace, setEditingPlace] = useState(null);
+  const [discoveryPosition, setDiscoveryPosition] = useState(null);
+  const [selectedDiscovery, setSelectedDiscovery] = useState(null);
 
   const [edgeList, setEdgeList] = useState([]);
   const [showEdgeForm, setShowEdgeForm] = useState(false);
   const [editingEdge, setEditingEdge] = useState(null);
   const [selectedEdge, setSelectedEdge] = useState(null);
   const [initialEdge, setInitialEdge] = useState(null);
+
+  const [discoveryList, setDiscoveryList] = useState([]);
+  const [pendingDiscovery, setPendingDiscovery] = useState(null);
 
   const [edgeSplitMode, setEdgeSplitMode] = useState("idle");
   const [splitTargetEdge, setSplitTargetEdge] = useState(null);
@@ -125,35 +133,59 @@ function App() {
 
   useEffect(() => {
     async function loadData() {
-      const [
-        { data: places, error: placesError },
-        { data: edges, error: edgesError },
-      ] = await Promise.all([
-        supabase.from("places").select("*"),
-        supabase.from("edges").select("*"),
-      ]);
+      setIsLoading(true);
 
-      if (placesError) {
-        console.error("placesの取得に失敗:", placesError);
-      } else {
-        const loadedPlaces = places ?? [];
-        setPlaceList(loadedPlaces);
+      try {
+        // Places
+        const { data: places, error: placesError } = await supabase
+          .from("places")
+          .select("*");
 
-        const initialPlace =
-          loadedPlaces.find((item) => item.id === "entrance") ??
-          loadedPlaces[0] ??
-          null;
+        if (placesError) {
+          console.error("placesの取得に失敗:", placesError);
+        } else {
+          const loadedPlaces = places ?? [];
 
-        setPlace(initialPlace);
+          setPlaceList(loadedPlaces);
+
+          const initialPlace =
+            loadedPlaces.find((item) => item.id === "entrance") ??
+            loadedPlaces[0] ??
+            null;
+
+          setPlace(initialPlace);
+        }
+
+        // Edges
+        const { data: edges, error: edgesError } = await supabase
+          .from("edges")
+          .select("*");
+
+        if (edgesError) {
+          console.error("edgesの取得に失敗:", edgesError);
+        } else {
+          setEdgeList((edges ?? []).map(toAppEdge));
+        }
+
+        // Discoveries
+        try {
+          const discoveries = await loadDiscoveries();
+          console.log("discoveries", discoveries);
+          setDiscoveryList(discoveries ?? []);
+        } catch (discoveryError) {
+          console.error(
+            "discoveriesの取得に失敗:",
+            discoveryError
+          );
+
+          // Discoveryだけ失敗してもアプリは表示する
+          setDiscoveryList([]);
+        }
+      } catch (error) {
+        console.error("初期データの取得中にエラー:", error);
+      } finally {
+        setIsLoading(false);
       }
-
-      if (edgesError) {
-        console.error("edgesの取得に失敗:", edgesError);
-      } else {
-        setEdgeList((edges ?? []).map(toAppEdge));
-      }
-
-      setIsLoading(false);
     }
 
     loadData();
@@ -600,6 +632,91 @@ function App() {
     }
   };
 
+  const handleSaveDiscovery = async (
+    discovery,
+    connectedPlaceId = null,
+    connectedEdgeId = null
+  ) => {
+    const {
+      imageFile,
+      ...discoveryData
+    } = discovery;
+
+    let imageUrl = null;
+    let uploadedImagePath = null;
+
+    try {
+      if (imageFile) {
+        const extension =
+          imageFile.name
+            .split(".")
+            .pop()
+            ?.toLowerCase() || "jpg";
+
+        uploadedImagePath =
+          `${crypto.randomUUID()}.${extension}`;
+
+        const { error: uploadError } =
+          await supabase.storage
+            .from("discovery-images")
+            .upload(
+              uploadedImagePath,
+              imageFile,
+              {
+                cacheControl: "3600",
+                upsert: false,
+                contentType: imageFile.type,
+              }
+            );
+
+        if (uploadError) {
+          throw uploadError;
+        }
+
+        const { data: publicUrlData } =
+          supabase.storage
+            .from("discovery-images")
+            .getPublicUrl(uploadedImagePath);
+
+        imageUrl = publicUrlData.publicUrl;
+      }
+
+      const { data, error } = await supabase
+        .from("discoveries")
+        .insert({
+          ...discoveryData,
+          image_url: imageUrl,
+          connected_place_id: connectedPlaceId,
+          connected_edge_id: connectedEdgeId,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      setDiscoveryList((currentDiscoveries) => [
+        ...currentDiscoveries,
+        data,
+      ]);
+
+      setPendingDiscovery(null);
+      setDiscoveryPosition(null);
+      setClickedPosition(null);
+    } catch (error) {
+      console.error("発見の保存に失敗:", error);
+
+      if (uploadedImagePath) {
+        await supabase.storage
+          .from("discovery-images")
+          .remove([uploadedImagePath]);
+      }
+
+      alert("発見を保存できませんでした");
+    }
+  };
+
   if (isLoading) {
     return <div>読み込み中...</div>;
   }
@@ -659,6 +776,7 @@ function App() {
       <MapViewer
         places={placeList}
         edges={edgeList}
+        discoveries={discoveryList}
         place={place}
         setPlace={(selectedPlace) => {
           setPlace(selectedPlace);
@@ -680,10 +798,17 @@ function App() {
         currentPosition={currentPosition}
         setCurrentPosition={setCurrentPosition}
         isCurrentPositionSelected={isCurrentPositionSelected}
+        showDiscoveryForm={showDiscoveryForm}
+        setShowDiscoveryForm={setShowDiscoveryForm}
+        discoveryPosition={discoveryPosition}
+        setDiscoveryPosition={setDiscoveryPosition}
+        selectedDiscovery={selectedDiscovery}
+        setSelectedDiscovery={setSelectedDiscovery}
         onCurrentPositionClick={() => {
           setIsCurrentPositionSelected(true);
           setSelectedEdge(null);
           setClickedPosition(null);
+
         }}
 
         skipCameraMoveRequest={skipCameraMoveRequest}
@@ -788,6 +913,83 @@ function App() {
           onClose={closePlaceForm}
           initialPosition={clickedPosition}
           editingPlace={editingPlace}
+        />
+      )}
+
+      {showDiscoveryForm && (
+        <DiscoveryForm
+          position={discoveryPosition}
+          onClose={() => {
+            setShowDiscoveryForm(false);
+            setDiscoveryPosition(null);
+          }}
+          onSave={async (discovery) => {
+            setPendingDiscovery(discovery);
+            setShowDiscoveryForm(false);
+          }}
+        />
+      )}
+
+      {selectedDiscovery && (
+        <DiscoveryDetail
+          discovery={selectedDiscovery}
+          onClose={() => setSelectedDiscovery(null)}
+          places={placeList}
+          edges={edgeList}
+          onDelete={async () => {
+            const confirmed = window.confirm(
+              "この発見を削除しますか？"
+            );
+
+            if (!confirmed) return;
+
+            const { error } = await supabase
+              .from("discoveries")
+              .delete()
+              .eq("id", selectedDiscovery.id);
+
+            if (error) {
+              console.error("発見の削除に失敗:", error);
+              alert("発見を削除できませんでした");
+              return;
+            }
+
+            setDiscoveryList((currentDiscoveries) =>
+              currentDiscoveries.filter(
+                (item) => item.id !== selectedDiscovery.id
+              )
+            );
+
+            setSelectedDiscovery(null);
+          }}
+        />
+      )}
+
+      {pendingDiscovery && (
+        <DiscoveryConnectionModal
+          discovery={pendingDiscovery}
+          places={placeList}
+          edges={edgeList}
+          onConfirm={async ({
+            connectedPlaceId,
+            connectedEdgeId,
+          }) => {
+            await handleSaveDiscovery(
+              pendingDiscovery,
+              connectedPlaceId,
+              connectedEdgeId
+            );
+          }}
+          onSkip={async () => {
+            await handleSaveDiscovery(
+              pendingDiscovery,
+              null,
+              null
+            );
+          }}
+          onClose={() => {
+            setPendingDiscovery(null);
+          }}
         />
       )}
 
