@@ -73,11 +73,6 @@ function DiscoveryForm({
     };
 
     const handleSubmit = async (event) => {
-        console.log({
-            position,
-            editingDiscovery,
-        });
-
         event.preventDefault();
 
         if (isSaving) return;

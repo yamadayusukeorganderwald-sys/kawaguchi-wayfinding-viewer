@@ -15,6 +15,7 @@ import DiscoveryConnectionModal from "./components/DiscoveryConnectionModal";
 import { createImageFileName } from "./utils/imageFileName";
 import DeveloperTools from "./components/DeveloperTools";
 import { InteractionMode } from "./constants/interactionMode";
+import { loadAreas } from "./data/areas";
 
 const toAppEdge = (edge) => ({
   id: edge.id,
@@ -99,6 +100,7 @@ function App() {
 
   const [discoveryList, setDiscoveryList] = useState([]);
   const [pendingDiscovery, setPendingDiscovery] = useState(null);
+  const [areaList, setAreaList] = useState([]);
 
   const [interactionMode, setInteractionMode] =
     useState(InteractionMode.IDLE);
@@ -188,6 +190,21 @@ function App() {
           // Discoveryだけ失敗してもアプリは表示する
           setDiscoveryList([]);
         }
+
+        // Areas
+        try {
+          const areas = await loadAreas();
+          console.log("areas", areas);
+          setAreaList(areas ?? []);
+        } catch (areaError) {
+          console.error(
+            "areasの取得に失敗:",
+            areaError
+          );
+
+          setAreaList([]);
+        }
+
       } catch (error) {
         console.error("初期データの取得中にエラー:", error);
       } finally {
@@ -876,6 +893,7 @@ function App() {
         places={placeList}
         edges={edgeList}
         discoveries={discoveryList}
+        areas={areaList}
         place={place}
         setPlace={(selectedPlace) => {
           setPlace(selectedPlace);

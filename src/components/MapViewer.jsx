@@ -58,6 +58,7 @@ function MapViewer({
     places,
     edges,
     discoveries,
+    areas,
 
     place,
     setPlace,
@@ -104,6 +105,7 @@ function MapViewer({
     const edgeEntitiesRef = useRef([]);
     const discoveryEntitiesRef = useRef([]);
     const routeEntitiesRef = useRef([]);
+    const areaEntitiesRef = useRef([]);
     const clickedMarkerRef = useRef(null);
     const currentPlaceRef = useRef(place);
 
@@ -1072,6 +1074,67 @@ function MapViewer({
         });
 
     }, [discoveries]);
+
+    useEffect(() => {
+        const viewer = viewerRef.current;
+
+        if (!viewer || viewer.isDestroyed()) return;
+
+        areaEntitiesRef.current.forEach((entity) => {
+            viewer.entities.remove(entity);
+        });
+
+        areaEntitiesRef.current = [];
+
+        console.log("areas", areas);
+
+        areas.forEach((area) => {
+            if (
+                !Array.isArray(area.flatCoordinates) ||
+                area.flatCoordinates.length < 6
+            ) {
+                console.warn(
+                    "Areaの座標が不正です:",
+                    area
+                );
+                return;
+            }
+
+            const baseHeight =
+                Number(area.base_height) || 0;
+
+            const extrudedHeight =
+                Number(area.extruded_height) || 0;
+
+            const entity = viewer.entities.add({
+                name: area.name,
+
+                polygon: {
+                    hierarchy:
+                        Cesium.Cartesian3.fromDegreesArray(
+                            area.flatCoordinates
+                        ),
+
+                    height: baseHeight,
+
+                    extrudedHeight:
+                        extrudedHeight > 0
+                            ? baseHeight + extrudedHeight
+                            : undefined,
+
+                    material:
+                        Cesium.Color.RED.withAlpha(0.4),
+
+                    outline: true,
+                    outlineColor: Cesium.Color.WHITE,
+                },
+            });
+
+            entity.area = area;
+            areaEntitiesRef.current.push(entity);
+        });
+
+    }, [areas]);
 
     const isPlacingSplit =
         interactionMode === InteractionMode.EDGE_SPLIT_PLACING;
