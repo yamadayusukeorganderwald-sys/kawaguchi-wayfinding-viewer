@@ -1675,6 +1675,34 @@ function MapViewer({
                 {gpsEnabled ? "● GPS ON" : "○ GPS OFF"}
             </button>
 
+            {interactionMode === InteractionMode.PLACE_DRAGGING && (
+                <div
+                    style={{
+                        position: "absolute",
+                        top: "66px",
+                        left: "16px",
+                        padding: "6px 10px",
+                        borderRadius: "10px",
+                        background: "rgba(0, 0, 0, 0.72)",
+                        color: "#fff",
+                        fontSize: "12px",
+                        lineHeight: "1.3",
+                        zIndex: 20,
+                        pointerEvents: "none",
+                    }}
+                >
+                    <div>📍 地点移動中</div>
+                    <div
+                        style={{
+                            fontSize: "10px",
+                            opacity: 0.75,
+                        }}
+                    >
+                        指を離すと保存
+                    </div>
+                </div>
+            )}
+
             <button
                 type="button"
                 onClick={(event) => {
