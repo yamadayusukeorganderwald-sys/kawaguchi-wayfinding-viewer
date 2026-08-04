@@ -3,6 +3,7 @@ import * as Cesium from "cesium";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 import { findShortestRoute } from "../utils/routeSearch";
 import { getClosestPointOnSegment } from "../utils/geometry";
+import { InteractionMode } from "../constants/interactionMode";
 
 const LEVEL_HEIGHTS = {
     [-1]: -5,
@@ -79,8 +80,8 @@ function MapViewer({
     isCurrentPositionSelected,
     onCurrentPositionClick,
 
-    edgeSplitMode,
-    setEdgeSplitMode,
+    interactionMode,
+    setInteractionMode,
     splitTargetEdge,
     splitPreviewPosition,
     setSplitPreviewPosition,
@@ -90,6 +91,7 @@ function MapViewer({
     currentPosition,
     setCurrentPosition,
     setSelectedDiscovery,
+    onPlaceMove,
 }) {
     const cesiumContainer = useRef(null);
     const viewerRef = useRef(null);
@@ -104,11 +106,18 @@ function MapViewer({
     const routeEntitiesRef = useRef([]);
     const clickedMarkerRef = useRef(null);
     const currentPlaceRef = useRef(place);
+
+    const placeLongPressTimerRef = useRef(null);
+    const pressedPlaceRef = useRef(null);
+    const draggingPlaceEntityRef = useRef(null);
+    const draggingConnectedEdgesRef = useRef([]);
+
     const splitPreviewRef = useRef(null);
     const newPointPreviewRef = useRef(null);
     const newPointPositionRef = useRef(null);
+    const draggingPlacePositionRef = useRef(null);
     const splitPreviewPositionRef = useRef(null);
-    const edgeSplitModeRef = useRef(edgeSplitMode);
+    const interactionModeRef = useRef(interactionMode);
     const splitTargetEdgeRef = useRef(splitTargetEdge);
     const placesRef = useRef(places);
     const splitEdgePreviewRefs = useRef([]);
@@ -122,8 +131,8 @@ function MapViewer({
         useRef(false);
 
     useEffect(() => {
-        edgeSplitModeRef.current = edgeSplitMode;
-    }, [edgeSplitMode]);
+        interactionModeRef.current = interactionMode;
+    }, [interactionMode]);
 
     useEffect(() => {
         splitTargetEdgeRef.current = splitTargetEdge;
@@ -167,16 +176,17 @@ function MapViewer({
         const controller =
             viewer.scene.screenSpaceCameraController;
 
-        const isSplitting =
-            edgeSplitMode === "selectingOnEdge" ||
-            edgeSplitMode === "placingNewPoint";
+        const isMapInteractionLocked =
+            interactionMode === InteractionMode.EDGE_SPLIT_SELECTING ||
+            interactionMode === InteractionMode.EDGE_SPLIT_PLACING ||
+            interactionMode === InteractionMode.PLACE_DRAGGING;
 
-        controller.enableRotate = !isSplitting;
-        controller.enableTranslate = !isSplitting;
-        controller.enableZoom = !isSplitting;
-        controller.enableTilt = !isSplitting;
-        controller.enableLook = !isSplitting;
-    }, [edgeSplitMode]);
+        controller.enableRotate = !isMapInteractionLocked;
+        controller.enableTranslate = !isMapInteractionLocked;
+        controller.enableZoom = !isMapInteractionLocked;
+        controller.enableTilt = !isMapInteractionLocked;
+        controller.enableLook = !isMapInteractionLocked;
+    }, [interactionMode]);
 
     useEffect(() => {
         const viewer = new Cesium.Viewer(cesiumContainer.current, {
@@ -245,11 +255,88 @@ function MapViewer({
             viewer.scene.canvas
         );
 
+        handler.setInputAction((movement) => {
+            const picked = viewer.scene.pick(movement.position);
+
+            if (!picked?.id?.place) {
+                return;
+            }
+
+            pressedPlaceRef.current = picked.id.place;
+
+            placeLongPressTimerRef.current = window.setTimeout(() => {
+                const pressedPlace = pressedPlaceRef.current;
+
+                if (!pressedPlace) return;
+
+                const draggingEntity = entitiesRef.current.find(
+                    (entity) => entity.place?.id === pressedPlace.id
+                );
+
+                if (!draggingEntity) return;
+
+                draggingPlaceEntityRef.current = draggingEntity;
+
+                draggingConnectedEdgesRef.current =
+                    edgeEntitiesRef.current.filter(
+                        (entity) =>
+                            entity.edge &&
+                            (
+                                entity.edge.from === pressedPlace.id ||
+                                entity.edge.to === pressedPlace.id
+                            )
+                    );
+
+                draggingPlacePositionRef.current = {
+                    longitude: pressedPlace.longitude,
+                    latitude: pressedPlace.latitude,
+                    level: pressedPlace.level,
+                };
+
+                setPlace(pressedPlace);
+                setInteractionMode(InteractionMode.PLACE_DRAGGING);
+
+                console.log("地点ドラッグ開始");
+            }, 500);
+        }, Cesium.ScreenSpaceEventType.LEFT_DOWN);
+
+        handler.setInputAction(() => {
+            if (placeLongPressTimerRef.current !== null) {
+                clearTimeout(placeLongPressTimerRef.current);
+                placeLongPressTimerRef.current = null;
+            }
+
+            if (
+                interactionModeRef.current ===
+                InteractionMode.PLACE_DRAGGING
+            ) {
+                const draggedPlace = pressedPlaceRef.current;
+                const draggedPosition = draggingPlacePositionRef.current;
+
+                if (draggedPlace && draggedPosition && onPlaceMove) {
+                    onPlaceMove({
+                        ...draggedPlace,
+                        longitude: draggedPosition.longitude,
+                        latitude: draggedPosition.latitude,
+                    });
+                }
+
+                draggingPlaceEntityRef.current = null;
+                draggingPlacePositionRef.current = null;
+
+                setInteractionMode(InteractionMode.IDLE);
+
+                console.log("地点ドラッグ終了");
+            }
+
+            pressedPlaceRef.current = null;
+        }, Cesium.ScreenSpaceEventType.LEFT_UP);
+
         handler.setInputAction((click) => {
 
             // エッジ上の分割位置を確定
             if (
-                edgeSplitModeRef.current === "selectingOnEdge"
+                interactionModeRef.current === InteractionMode.EDGE_SPLIT_SELECTING
             ) {
                 const previewPosition =
                     splitPreviewPositionRef.current;
@@ -265,14 +352,14 @@ function MapViewer({
                     splitPreviewRef.current = null;
                 }
 
-                setEdgeSplitMode("placingNewPoint");
+                setInteractionMode(InteractionMode.EDGE_SPLIT_PLACING);
 
                 return;
             }
 
             // 新しい地点の位置を確定
             if (
-                edgeSplitModeRef.current === "placingNewPoint"
+                interactionModeRef.current === InteractionMode.EDGE_SPLIT_PLACING
             ) {
                 const newPointPosition =
                     newPointPositionRef.current;
@@ -291,7 +378,7 @@ function MapViewer({
                     return;
                 }
 
-                setEdgeSplitMode("confirmingSplit");
+                setInteractionMode(InteractionMode.EDGE_SPLIT_CONFIRMING);
 
                 if (onConfirmEdgeSplitRef.current) {
                     onConfirmEdgeSplitRef.current({
@@ -401,10 +488,10 @@ function MapViewer({
         );
 
         handler.setInputAction((movement) => {
-            const mode = edgeSplitModeRef.current;
+            const mode = interactionModeRef.current;
 
             // エッジ上の分割位置を選んでいる状態
-            if (mode === "selectingOnEdge") {
+            if (mode === InteractionMode.EDGE_SPLIT_SELECTING) {
                 const edge = splitTargetEdgeRef.current;
 
                 if (!edge) return;
@@ -471,7 +558,7 @@ function MapViewer({
             }
 
             // 新しい地点を自由配置している状態
-            if (mode === "placingNewPoint") {
+            if (mode === InteractionMode.EDGE_SPLIT_PLACING) {
                 let cartesian =
                     viewer.scene.pickPosition(
                         movement.endPosition
@@ -504,6 +591,93 @@ function MapViewer({
                     ),
                     fixedPosition.level
                 );
+            }
+
+            if (mode === InteractionMode.PLACE_DRAGGING) {
+                const draggingEntity =
+                    draggingPlaceEntityRef.current;
+
+                const draggingPlace =
+                    pressedPlaceRef.current;
+
+                if (!draggingEntity || !draggingPlace) return;
+
+                let cartesian =
+                    viewer.scene.pickPosition(
+                        movement.endPosition
+                    );
+
+                if (!cartesian) {
+                    cartesian =
+                        viewer.camera.pickEllipsoid(
+                            movement.endPosition,
+                            viewer.scene.globe.ellipsoid
+                        );
+                }
+
+                if (!cartesian) return;
+
+                const cartographic =
+                    Cesium.Cartographic.fromCartesian(cartesian);
+
+                const nextPosition = {
+                    longitude: Cesium.Math.toDegrees(
+                        cartographic.longitude
+                    ),
+                    latitude: Cesium.Math.toDegrees(
+                        cartographic.latitude
+                    ),
+                    level: draggingPlace.level,
+                };
+
+                draggingPlacePositionRef.current = nextPosition;
+
+                draggingEntity.position =
+                    Cesium.Cartesian3.fromDegrees(
+                        nextPosition.longitude,
+                        nextPosition.latitude,
+                        getLevelHeight(nextPosition.level)
+                    );
+
+
+
+                draggingConnectedEdgesRef.current.forEach((entity) => {
+                    const edge = entity.edge;
+
+                    const fromPlace = placesRef.current.find(
+                        (p) => p.id === edge.from
+                    );
+
+                    const toPlace = placesRef.current.find(
+                        (p) => p.id === edge.to
+                    );
+
+                    if (!fromPlace || !toPlace) return;
+
+                    const from =
+                        edge.from === draggingPlace.id
+                            ? nextPosition
+                            : fromPlace;
+
+                    const to =
+                        edge.to === draggingPlace.id
+                            ? nextPosition
+                            : toPlace;
+
+                    entity.polyline.positions = [
+                        Cesium.Cartesian3.fromDegrees(
+                            from.longitude,
+                            from.latitude,
+                            getLevelHeight(from.level)
+                        ),
+                        Cesium.Cartesian3.fromDegrees(
+                            to.longitude,
+                            to.latitude,
+                            getLevelHeight(to.level)
+                        ),
+                    ];
+                });
+                return;
             }
 
         }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
@@ -899,6 +1073,9 @@ function MapViewer({
 
     }, [discoveries]);
 
+    const isPlacingSplit =
+        interactionMode === InteractionMode.EDGE_SPLIT_PLACING;
+
     useEffect(() => {
         const viewer = viewerRef.current;
 
@@ -913,7 +1090,7 @@ function MapViewer({
         edges.forEach((edge) => {
 
             const isSplitTarget =
-                edgeSplitMode === "placingNewPoint" &&
+                isPlacingSplit &&
                 splitTargetEdge?.id === edge.id;
 
             if (isSplitTarget) return;
@@ -986,7 +1163,7 @@ function MapViewer({
         edges,
         places,
         selectedEdge,
-        edgeSplitMode,
+        isPlacingSplit,
         splitTargetEdge,
     ]);
 
@@ -1394,7 +1571,7 @@ function MapViewer({
         const viewer = viewerRef.current;
 
         if (!viewer || viewer.isDestroyed()) return;
-        if (edgeSplitMode !== "idle") return;
+        if (interactionMode !== InteractionMode.IDLE) return;
 
         if (splitPreviewRef.current) {
             viewer.entities.remove(
@@ -1417,7 +1594,7 @@ function MapViewer({
         splitEdgePreviewRefs.current = [];
         splitPreviewPositionRef.current = null;
         newPointPositionRef.current = null;
-    }, [edgeSplitMode]);
+    }, [interactionMode]);
 
     const focusSelectedPlace = () => {
         const viewer = viewerRef.current;

@@ -14,6 +14,7 @@ import DiscoveryDetail from "./components/DiscoveryDetail";
 import DiscoveryConnectionModal from "./components/DiscoveryConnectionModal";
 import { createImageFileName } from "./utils/imageFileName";
 import DeveloperTools from "./components/DeveloperTools";
+import { InteractionMode } from "./constants/interactionMode";
 
 const toAppEdge = (edge) => ({
   id: edge.id,
@@ -98,7 +99,8 @@ function App() {
   const [discoveryList, setDiscoveryList] = useState([]);
   const [pendingDiscovery, setPendingDiscovery] = useState(null);
 
-  const [edgeSplitMode, setEdgeSplitMode] = useState("idle");
+  const [interactionMode, setInteractionMode] =
+    useState(InteractionMode.IDLE);
   const [splitTargetEdge, setSplitTargetEdge] = useState(null);
   const [splitPreviewPosition, setSplitPreviewPosition] = useState(null);
 
@@ -295,12 +297,12 @@ function App() {
     }
 
     setSplitTargetEdge(selectedEdge);
-    setEdgeSplitMode("selectingOnEdge");
+    setInteractionMode(InteractionMode.EDGE_SPLIT_SELECTING);
     setSplitPreviewPosition(null);
   };
 
   const handleCancelEdgeSplit = () => {
-    setEdgeSplitMode("idle");
+    setInteractionMode(InteractionMode.IDLE);
     setSplitTargetEdge(null);
     setSplitPreviewPosition(null);
   };
@@ -503,7 +505,7 @@ function App() {
       );
 
       alert("分割地点を保存できませんでした");
-      setEdgeSplitMode("placingNewPoint");
+      setInteractionMode(InteractionMode.EDGE_SPLIT_PLACING);
       return;
     }
 
@@ -618,7 +620,7 @@ function App() {
     setShowRoute(false);
     setRouteAnchor(null);
 
-    setEdgeSplitMode("idle");
+    setInteractionMode(InteractionMode.IDLE);
     setSplitTargetEdge(null);
     setSplitPreviewPosition(null);
   };
@@ -820,6 +822,7 @@ function App() {
         setDiscoveryPosition={setDiscoveryPosition}
         selectedDiscovery={selectedDiscovery}
         setSelectedDiscovery={setSelectedDiscovery}
+        onPlaceMove={handleUpdatePlace}
         onCurrentPositionClick={() => {
           setIsCurrentPositionSelected(true);
           setSelectedEdge(null);
@@ -829,8 +832,8 @@ function App() {
 
         skipCameraMoveRequest={skipCameraMoveRequest}
 
-        edgeSplitMode={edgeSplitMode}
-        setEdgeSplitMode={setEdgeSplitMode}
+        interactionMode={interactionMode}
+        setInteractionMode={setInteractionMode}
         splitTargetEdge={splitTargetEdge}
         splitPreviewPosition={splitPreviewPosition}
         setSplitPreviewPosition={setSplitPreviewPosition}
@@ -870,7 +873,11 @@ function App() {
       {isMobile && (
         <MobileToolbar
           canSplitEdge={Boolean(selectedEdge)}
-          isSplittingEdge={edgeSplitMode !== "idle"}
+          isSplittingEdge={
+            interactionMode === InteractionMode.EDGE_SPLIT_SELECTING ||
+            interactionMode === InteractionMode.EDGE_SPLIT_PLACING ||
+            interactionMode === InteractionMode.EDGE_SPLIT_CONFIRMING
+          }
 
           hasRouteAnchor={Boolean(routeAnchor)}
           showRoute={showRoute}
@@ -916,7 +923,7 @@ function App() {
           isMobile={isMobile}
 
           selectedEdge={selectedEdge}
-          edgeSplitMode={edgeSplitMode}
+          interactionMode={interactionMode}
           onStartEdgeSplit={handleStartEdgeSplit}
           onCancelEdgeSplit={handleCancelEdgeSplit}
         />

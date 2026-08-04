@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { InteractionMode } from "../constants/interactionMode";
 
 function EdgeList({
     edges,
@@ -19,11 +20,16 @@ function EdgeList({
     setShowRoute,
 
     selectedEdge,
-    edgeSplitMode,
+    interactionMode,
     onStartEdgeSplit,
     onCancelEdgeSplit,
 }) {
     const [isOpen, setIsOpen] = useState(false);
+
+    const isSplittingEdge =
+        interactionMode === InteractionMode.EDGE_SPLIT_SELECTING ||
+        interactionMode === InteractionMode.EDGE_SPLIT_PLACING ||
+        interactionMode === InteractionMode.EDGE_SPLIT_CONFIRMING;
 
     const getPlaceName = (placeId) => {
         const targetPlace = places.find(
@@ -72,34 +78,34 @@ function EdgeList({
             </button>
             <button
                 onClick={
-                    edgeSplitMode === "idle"
-                        ? onStartEdgeSplit
-                        : onCancelEdgeSplit
+                    isSplittingEdge
+                        ? onCancelEdgeSplit
+                        : onStartEdgeSplit
                 }
-                disabled={!selectedEdge && edgeSplitMode === "idle"}
+                disabled={!selectedEdge && !isSplittingEdge}
                 style={{
                     marginBottom: "8px",
                     width: "100%",
                     padding: "8px",
                     cursor:
-                        selectedEdge || edgeSplitMode !== "idle"
+                        selectedEdge || isSplittingEdge
                             ? "pointer"
                             : "not-allowed",
                     opacity:
-                        selectedEdge || edgeSplitMode !== "idle"
+                        selectedEdge || isSplittingEdge
                             ? 1
                             : 0.45,
                     background:
-                        edgeSplitMode !== "idle"
+                        isSplittingEdge
                             ? "#ffe0b2"
                             : "#fff",
                     border: "1px solid #ccc",
                     borderRadius: "6px",
                 }}
             >
-                {edgeSplitMode === "idle"
-                    ? "✂ Edge分割"
-                    : "✕ Edge分割をキャンセル"}
+                {isSplittingEdge
+                    ? "✕ Edge分割をキャンセル"
+                    : "✂ Edge分割"}
             </button>
 
             <button
