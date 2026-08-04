@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
+import { compressImage } from "../utils/imageCompression";
+import { createImageFileName } from "../utils/imageFileName";
 
 const PLACE_TYPE_OPTIONS = [
     { value: "station", label: "駅" },
@@ -23,7 +25,7 @@ function PlaceForm({
     );
 
     const [type, setType] = useState(
-        editingPlace?.type ?? "observation"
+        editingPlace?.type ?? "junction"
     );
 
     const [placeTypes, setPlaceTypes] = useState(
@@ -65,6 +67,7 @@ function PlaceForm({
     const [imageFile, setImageFile] = useState(null);
 
     const [createEdges, setCreateEdges] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
 
     const inputStyle = {
         width: "100%",
@@ -89,6 +92,9 @@ function PlaceForm({
     const handleSubmit = async (event) => {
         event.preventDefault();
 
+        // すでに保存処理中なら何もしない
+        if (isSaving) return;
+
         const longitudeNumber = Number(longitude);
         const latitudeNumber = Number(latitude);
 
@@ -100,56 +106,82 @@ function PlaceForm({
             return;
         }
 
-        let imageUrl = editingPlace?.image ?? "";
+        setIsSaving(true);
 
-        if (imageFile) {
-            const extension = imageFile.name.split(".").pop();
-            const fileName = `${Date.now()}-${crypto.randomUUID()}.${extension}`;
+        try {
+            const placeId = editingPlace
+                ? editingPlace.id
+                : `place-${Date.now()}`;
 
-            const { error: uploadError } = await supabase.storage
-                .from("place-images")
-                .upload(fileName, imageFile);
+            let imageUrl = editingPlace?.image ?? "";
 
-            if (uploadError) {
-                console.error("画像アップロード失敗:", uploadError);
-                alert("画像をアップロードできませんでした");
-                return;
+            if (imageFile) {
+                const compressedImage =
+                    await compressImage(imageFile);
+
+                console.log(
+                    "画像圧縮:",
+                    `${(imageFile.size / 1024 / 1024).toFixed(2)} MB`,
+                    "→",
+                    `${(compressedImage.size / 1024).toFixed(0)} KB`
+                );
+
+                const fileName = createImageFileName(
+                    "place",
+                    placeId
+                );
+
+                const { error: uploadError } =
+                    await supabase.storage
+                        .from("place-images")
+                        .upload(fileName, compressedImage);
+
+                if (uploadError) {
+                    console.error("画像アップロード失敗:", uploadError);
+                    alert("画像をアップロードできませんでした");
+                    return;
+                }
+
+                const { data: publicUrlData } = supabase.storage
+                    .from("place-images")
+                    .getPublicUrl(fileName);
+
+                imageUrl = publicUrlData.publicUrl;
             }
 
-            const { data: publicUrlData } = supabase.storage
-                .from("place-images")
-                .getPublicUrl(fileName);
+            const submittedPlace = {
+                id: editingPlace
+                    ? editingPlace.id
+                    : `place-${Date.now()}`,
 
-            imageUrl = publicUrlData.publicUrl;
+                name: name.trim(),
+                type,
+                place_type: placeTypes,
+                level,
+                longitude: longitudeNumber,
+                latitude: latitudeNumber,
+                height: editingPlace?.height ?? 500,
+                image: imageUrl,
+                observation: observation.trim(),
+                problem: problem.trim(),
+                proposal: proposal.trim(),
+
+                createEdges,
+            };
+
+            if (editingPlace) {
+                await onUpdatePlace(submittedPlace);
+            } else {
+                await onAddPlace(submittedPlace);
+            }
+
+            onClose();
+        } catch (error) {
+            console.error("地点の保存に失敗:", error);
+            alert("地点を保存できませんでした");
+        } finally {
+            setIsSaving(false);
         }
-
-        const submittedPlace = {
-            id: editingPlace
-                ? editingPlace.id
-                : `place-${Date.now()}`,
-
-            name: name.trim(),
-            type,
-            place_type: placeTypes,
-            level,
-            longitude: longitudeNumber,
-            latitude: latitudeNumber,
-            height: editingPlace?.height ?? 500,
-            image: imageUrl,
-            observation: observation.trim(),
-            problem: problem.trim(),
-            proposal: proposal.trim(),
-
-            createEdges,
-        };
-
-        if (editingPlace) {
-            await onUpdatePlace(submittedPlace);
-        } else {
-            await onAddPlace(submittedPlace);
-        }
-
-        onClose();
     };
 
     return (
@@ -205,16 +237,22 @@ function PlaceForm({
                     >
                         <button
                             type="submit"
+                            disabled={isSaving}
                             style={{
                                 padding: "6px 12px",
                                 border: "none",
                                 borderRadius: "6px",
-                                background: "#2196f3",
+                                background: isSaving ? "#90caf9" : "#2196f3",
                                 color: "#fff",
-                                cursor: "pointer",
+                                cursor: isSaving ? "not-allowed" : "pointer",
+                                opacity: isSaving ? 0.8 : 1,
                             }}
                         >
-                            {editingPlace ? "保存" : "追加"}
+                            {isSaving
+                                ? "保存中..."
+                                : editingPlace
+                                    ? "保存"
+                                    : "追加"}
                         </button>
 
                         <button

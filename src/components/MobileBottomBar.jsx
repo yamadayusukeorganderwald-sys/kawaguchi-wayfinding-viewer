@@ -58,7 +58,7 @@ function MobileBottomBar({
   const displayName = isCurrentPositionSelected
     ? "現在地"
     : selectedEdge
-      ? "Edge"
+      ? selectedEdge.road_name?.trim() || "名無しの道"
       : isUnregisteredPosition
         ? "未登録地点"
         : place?.name ?? "地点未選択";

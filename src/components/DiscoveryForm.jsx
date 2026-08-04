@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { compressImage } from "../utils/imageCompression";
 
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
 
@@ -63,6 +64,8 @@ function DiscoveryForm({
     const handleSubmit = async (event) => {
         event.preventDefault();
 
+        if (isSaving) return;
+
         const trimmedMessage = message.trim();
 
         if (!trimmedMessage) {
@@ -78,15 +81,31 @@ function DiscoveryForm({
         setIsSaving(true);
 
         try {
+            const compressedImage = imageFile
+                ? await compressImage(imageFile)
+                : null;
+
+            if (imageFile && compressedImage) {
+                console.log(
+                    "発見画像圧縮:",
+                    `${(imageFile.size / 1024 / 1024).toFixed(2)} MB`,
+                    "→",
+                    `${(compressedImage.size / 1024).toFixed(0)} KB`
+                );
+            }
+
             await onSave({
                 latitude: position.latitude,
                 longitude: position.longitude,
                 height: position.height ?? 0,
                 message: trimmedMessage,
-                imageFile,
+                imageFile: compressedImage,
                 connected_place_id: null,
                 connected_edge_id: null,
             });
+        } catch (error) {
+            console.error("発見の保存に失敗:", error);
+            alert("発見を保存できませんでした");
         } finally {
             setIsSaving(false);
         }
@@ -203,7 +222,6 @@ function DiscoveryForm({
                     ref={fileInputRef}
                     type="file"
                     accept="image/*"
-                    capture="environment"
                     onChange={handleImageChange}
                     disabled={isSaving}
                     style={{

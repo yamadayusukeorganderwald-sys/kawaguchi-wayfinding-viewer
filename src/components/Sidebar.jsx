@@ -173,7 +173,7 @@ function Sidebar({
                             margin: "14px 0 6px",
                         }}
                     >
-                        Edge
+                        {selectedEdge?.road_name?.trim() || "名無しの道"}
                     </h2>
 
                     <div

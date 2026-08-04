@@ -26,6 +26,10 @@ function EdgeForm({
         editingEdge?.road_context ?? "unknown"
     );
 
+    const [roadName, setRoadName] = useState(
+        editingEdge?.road_name ?? ""
+    );
+
     const isRoadContextFixed = [
         "stairs",
         "escalator",
@@ -35,6 +39,8 @@ function EdgeForm({
     const [bidirectional, setBidirectional] = useState(
         editingEdge?.bidirectional ?? true
     );
+
+    const [isSaving, setIsSaving] = useState(false);
 
     const fieldStyle = {
         display: "block",
@@ -88,6 +94,47 @@ function EdgeForm({
         }
     }, [isRoadContextFixed]);
 
+    const handleSave = async () => {
+        if (isSaving) return;
+
+        if (!from || !to) {
+            alert("FromとToを選択してください");
+            return;
+        }
+
+        if (from === to) {
+            alert("同じ地点同士は接続できません");
+            return;
+        }
+
+        setIsSaving(true);
+
+        try {
+            const edgeData = {
+                id: editingEdge?.id ?? crypto.randomUUID(),
+                from,
+                to,
+                distance: Number(distance),
+                walkingTime: Number(walkingTime),
+                movement_type: movementType,
+                road_context: roadContext,
+                road_name: roadName.trim(),
+                bidirectional,
+            };
+
+            if (editingEdge) {
+                await onUpdate(edgeData);
+            } else {
+                await onSave(edgeData);
+            }
+        } catch (error) {
+            console.error("Edgeの保存に失敗:", error);
+            alert("Edgeを保存できませんでした");
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     return (
         <div
             style={{
@@ -123,20 +170,58 @@ function EdgeForm({
                     {editingEdge ? "Edge編集" : "Edge追加"}
                 </h2>
 
-                <button
-                    type="button"
-                    onClick={onClose}
+                <div
                     style={{
-                        border: "none",
-                        background: "transparent",
-                        fontSize: "22px",
-                        cursor: "pointer",
-                        lineHeight: 1,
-                        padding: "2px 4px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
                     }}
                 >
-                    ×
-                </button>
+                    <button
+                        type="button"
+                        onClick={handleSave}
+                        disabled={isSaving}
+                        style={{
+                            padding: "6px 12px",
+                            border: "none",
+                            borderRadius: "6px",
+                            background: isSaving ? "#90caf9" : "#2196f3",
+                            color: "#fff",
+                            cursor: isSaving ? "not-allowed" : "pointer",
+                            opacity: isSaving ? 0.8 : 1,
+                        }}
+                    >
+                        {isSaving ? "保存中..." : "保存"}
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        disabled={isSaving}
+                        style={{
+                            border: "none",
+                            background: "transparent",
+                            fontSize: "22px",
+                            cursor: "pointer",
+                            lineHeight: 1,
+                            padding: "2px 4px",
+                        }}
+                    >
+                        ×
+                    </button>
+                </div>
+            </div>
+
+            <div style={{ marginBottom: "12px" }}>
+                <label>道名</label>
+
+                <input
+                    type="text"
+                    value={roadName}
+                    onChange={(e) => setRoadName(e.target.value)}
+                    placeholder="例：中央通り(空欄でも可)"
+                    style={fieldStyle}
+                />
             </div>
 
             <div style={{ marginBottom: "12px" }}>
@@ -270,36 +355,6 @@ function EdgeForm({
                     双方向
                 </label>
             </div>
-
-            <button
-                onClick={() => {
-                    const edgeData = {
-                        id: editingEdge?.id ?? crypto.randomUUID(),
-                        from,
-                        to,
-                        distance: Number(distance),
-                        walkingTime: Number(walkingTime),
-                        movement_type: movementType,
-                        road_context: roadContext,
-                        bidirectional,
-                    };
-
-                    if (editingEdge) {
-                        onUpdate(edgeData);
-                    } else {
-                        onSave(edgeData);
-                    }
-                }}
-                style={{
-                    marginRight: "8px",
-                }}
-            >
-                保存
-            </button>
-
-            <button onClick={onClose}>
-                閉じる
-            </button>
         </div>
     );
 }

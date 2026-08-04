@@ -12,6 +12,8 @@ import { loadDiscoveries } from "./data/discoveries";
 import DiscoveryForm from "./components/DiscoveryForm";
 import DiscoveryDetail from "./components/DiscoveryDetail";
 import DiscoveryConnectionModal from "./components/DiscoveryConnectionModal";
+import { createImageFileName } from "./utils/imageFileName";
+import DeveloperTools from "./components/DeveloperTools";
 
 const toAppEdge = (edge) => ({
   id: edge.id,
@@ -21,6 +23,7 @@ const toAppEdge = (edge) => ({
   walkingTime: edge.walking_time,
   movement_type: edge.movement_type,
   road_context: edge.road_context,
+  road_name: edge.road_name ?? "",
   bidirectional: edge.bidirectional,
 });
 
@@ -32,6 +35,7 @@ const toDatabaseEdge = (edge) => ({
   walking_time: edge.walkingTime,
   movement_type: edge.movement_type,
   road_context: edge.road_context,
+  road_name: edge.road_name || null,
   bidirectional: edge.bidirectional,
 });
 
@@ -334,16 +338,28 @@ function App() {
   };
 
   const handleUpdatePlace = async (updatedPlace) => {
+    const updateData = {
+      name: updatedPlace.name,
+      latitude: updatedPlace.latitude,
+      longitude: updatedPlace.longitude,
+      height: updatedPlace.height,
+      type: updatedPlace.type,
+      place_type: updatedPlace.place_type,
+      level: updatedPlace.level,
+      description: updatedPlace.description,
+      image_url: updatedPlace.image_url,
+    };
+
     const { data, error } = await supabase
       .from("places")
-      .update(updatedPlace)
+      .update(updateData)
       .eq("id", updatedPlace.id)
       .select()
       .single();
 
     if (error) {
       console.error("地点の更新に失敗:", error);
-      alert("地点を更新できませんでした");
+      alert(`地点を更新できませんでした\n${error.message}`);
       return;
     }
 
@@ -537,6 +553,7 @@ function App() {
         walkingTime: walkingTimeFromToNew,
         movement_type: edge.movement_type,
         road_context: edge.road_context,
+        road_name: edge.road_name ?? "",
         bidirectional: edge.bidirectional,
       },
       {
@@ -547,6 +564,7 @@ function App() {
         walkingTime: walkingTimeNewToTo,
         movement_type: edge.movement_type,
         road_context: edge.road_context,
+        road_name: edge.road_name ?? "",
         bidirectional: edge.bidirectional,
       },
     ];
@@ -637,6 +655,7 @@ function App() {
     connectedPlaceId = null,
     connectedEdgeId = null
   ) => {
+    const discoveryId = crypto.randomUUID();
     const {
       imageFile,
       ...discoveryData
@@ -647,14 +666,10 @@ function App() {
 
     try {
       if (imageFile) {
-        const extension =
-          imageFile.name
-            .split(".")
-            .pop()
-            ?.toLowerCase() || "jpg";
-
-        uploadedImagePath =
-          `${crypto.randomUUID()}.${extension}`;
+        uploadedImagePath = createImageFileName(
+          "discovery",
+          discoveryId
+        );
 
         const { error: uploadError } =
           await supabase.storage
@@ -684,6 +699,7 @@ function App() {
       const { data, error } = await supabase
         .from("discoveries")
         .insert({
+          id: discoveryId,
           ...discoveryData,
           image_url: imageUrl,
           connected_place_id: connectedPlaceId,
@@ -1069,6 +1085,9 @@ function App() {
             setEdgeConnectionPlace(null);
           }}
         />
+      )}
+      {import.meta.env.DEV && (
+        <DeveloperTools />
       )}
 
     </div>
