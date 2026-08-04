@@ -4,6 +4,7 @@ function DiscoveryDetail({
     edges,
     onClose,
     onDelete,
+    onEdit,
 }) {
     if (!discovery) return null;
 
@@ -160,6 +161,22 @@ function DiscoveryDetail({
                             flexShrink: 0,
                         }}
                     >
+                        <button
+                            type="button"
+                            onClick={onEdit}
+                            aria-label="編集"
+                            style={{
+                                width: "36px",
+                                height: "36px",
+                                border: "none",
+                                borderRadius: "50%",
+                                background: "#f2f2f2",
+                                fontSize: "18px",
+                                cursor: "pointer",
+                            }}
+                        >
+                            ✏️
+                        </button>
                         <button
                             type="button"
                             onClick={onDelete}

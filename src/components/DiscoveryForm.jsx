@@ -5,6 +5,7 @@ const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
 
 function DiscoveryForm({
     position,
+    editingDiscovery,
     onSave,
     onClose,
 }) {
@@ -12,6 +13,16 @@ function DiscoveryForm({
     const [imageFile, setImageFile] = useState(null);
     const [imagePreviewUrl, setImagePreviewUrl] = useState("");
     const [isSaving, setIsSaving] = useState(false);
+
+    useEffect(() => {
+        if (!editingDiscovery) return;
+
+        setMessage(editingDiscovery.message);
+
+        if (editingDiscovery.image_url) {
+            setImagePreviewUrl(editingDiscovery.image_url);
+        }
+    }, [editingDiscovery]);
 
     const fileInputRef = useRef(null);
 
@@ -62,6 +73,11 @@ function DiscoveryForm({
     };
 
     const handleSubmit = async (event) => {
+        console.log({
+            position,
+            editingDiscovery,
+        });
+
         event.preventDefault();
 
         if (isSaving) return;
@@ -73,7 +89,9 @@ function DiscoveryForm({
             return;
         }
 
-        if (!position) {
+        const targetPosition = position ?? editingDiscovery;
+
+        if (!targetPosition) {
             alert("発見地点を取得できていません");
             return;
         }
@@ -95,13 +113,17 @@ function DiscoveryForm({
             }
 
             await onSave({
-                latitude: position.latitude,
-                longitude: position.longitude,
-                height: position.height ?? 0,
+                id: editingDiscovery?.id,
+                latitude: targetPosition.latitude,
+                longitude: targetPosition.longitude,
+                height: targetPosition.height ?? 0,
                 message: trimmedMessage,
                 imageFile: compressedImage,
-                connected_place_id: null,
-                connected_edge_id: null,
+                image_url: editingDiscovery?.image_url ?? null,
+                connected_place_id:
+                    editingDiscovery?.connected_place_id ?? null,
+                connected_edge_id:
+                    editingDiscovery?.connected_edge_id ?? null,
             });
         } catch (error) {
             console.error("発見の保存に失敗:", error);
@@ -349,8 +371,12 @@ function DiscoveryForm({
                     }}
                 >
                     {isSaving
-                        ? "発見を残しています..."
-                        : "この発見を残す"}
+                        ? editingDiscovery
+                            ? "発見を更新しています..."
+                            : "発見を残しています..."
+                        : editingDiscovery
+                            ? "発見を更新"
+                            : "この発見を残す"}
                 </button>
             </form>
         </div>

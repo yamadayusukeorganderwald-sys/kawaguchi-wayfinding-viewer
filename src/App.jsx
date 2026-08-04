@@ -89,6 +89,7 @@ function App() {
   const [editingPlace, setEditingPlace] = useState(null);
   const [discoveryPosition, setDiscoveryPosition] = useState(null);
   const [selectedDiscovery, setSelectedDiscovery] = useState(null);
+  const [editingDiscovery, setEditingDiscovery] = useState(null);
 
   const [edgeList, setEdgeList] = useState([]);
   const [showEdgeForm, setShowEdgeForm] = useState(false);
@@ -652,6 +653,86 @@ function App() {
     }
   };
 
+  const handleUpdateDiscovery = async (updatedDiscovery) => {
+    const {
+      imageFile,
+      ...discoveryData
+    } = updatedDiscovery;
+
+    let imageUrl = discoveryData.image_url ?? null;
+
+    try {
+      if (imageFile) {
+        const uploadedImagePath = createImageFileName(
+          "discovery",
+          updatedDiscovery.id
+        );
+
+        const { error: uploadError } =
+          await supabase.storage
+            .from("discovery-images")
+            .upload(
+              uploadedImagePath,
+              imageFile,
+              {
+                cacheControl: "3600",
+                upsert: true,
+                contentType: imageFile.type,
+              }
+            );
+
+        if (uploadError) {
+          throw uploadError;
+        }
+
+        const { data: publicUrlData } =
+          supabase.storage
+            .from("discovery-images")
+            .getPublicUrl(uploadedImagePath);
+
+        imageUrl = publicUrlData.publicUrl;
+      }
+
+      const { data, error } = await supabase
+        .from("discoveries")
+        .update({
+          latitude: discoveryData.latitude,
+          longitude: discoveryData.longitude,
+          height: discoveryData.height,
+          message: discoveryData.message,
+          image_url: imageUrl,
+          connected_place_id:
+            discoveryData.connected_place_id,
+          connected_edge_id:
+            discoveryData.connected_edge_id,
+        })
+        .eq("id", updatedDiscovery.id)
+        .select()
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      setDiscoveryList((currentDiscoveries) =>
+        currentDiscoveries.map((item) =>
+          item.id === data.id ? data : item
+        )
+      );
+
+      setEditingDiscovery(null);
+      setShowDiscoveryForm(false);
+      setDiscoveryPosition(null);
+    } catch (error) {
+      console.error("発見の更新に失敗:", error);
+
+      alert(
+        `発見を更新できませんでした\n${error?.message ?? JSON.stringify(error)
+        }`
+      );
+    }
+  };
+
   const handleSaveDiscovery = async (
     discovery,
     connectedPlaceId = null,
@@ -945,11 +1026,18 @@ function App() {
           onClose={() => {
             setShowDiscoveryForm(false);
             setDiscoveryPosition(null);
+            setEditingDiscovery(null);
           }}
           onSave={async (discovery) => {
+            if (editingDiscovery) {
+              await handleUpdateDiscovery(discovery);
+              return;
+            }
+
             setPendingDiscovery(discovery);
             setShowDiscoveryForm(false);
           }}
+          editingDiscovery={editingDiscovery}
         />
       )}
 
@@ -984,6 +1072,11 @@ function App() {
             );
 
             setSelectedDiscovery(null);
+          }}
+          onEdit={() => {
+            setEditingDiscovery(selectedDiscovery);
+            setSelectedDiscovery(null);
+            setShowDiscoveryForm(true);
           }}
         />
       )}
