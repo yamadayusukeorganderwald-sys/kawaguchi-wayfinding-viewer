@@ -16,6 +16,7 @@ import { createImageFileName } from "./utils/imageFileName";
 import DeveloperTools from "./components/DeveloperTools";
 import { InteractionMode } from "./constants/interactionMode";
 import { loadAreas } from "./data/areas";
+import AreaForm from "./components/AreaForm";
 
 const toAppEdge = (edge) => ({
   id: edge.id,
@@ -101,6 +102,9 @@ function App() {
   const [discoveryList, setDiscoveryList] = useState([]);
   const [pendingDiscovery, setPendingDiscovery] = useState(null);
   const [areaList, setAreaList] = useState([]);
+  const [drawingAreaPoints, setDrawingAreaPoints] = useState([]);
+  const [showAreaForm, setShowAreaForm] = useState(false);
+  const [editingAreaVertexIndex, setEditingAreaVertexIndex] = useState(null);
 
   const [interactionMode, setInteractionMode] =
     useState(InteractionMode.IDLE);
@@ -670,6 +674,66 @@ function App() {
     }
   };
 
+  const handleStartAreaDrawing = () => {
+    setDrawingAreaPoints([]);
+    setInteractionMode(InteractionMode.AREA_DRAWING);
+  };
+
+  const handleStartAreaEditing = () => {
+    if (drawingAreaPoints.length < 3) {
+      alert("Areaは3点以上で作成してください");
+      return;
+    }
+
+    setInteractionMode(InteractionMode.AREA_EDITING);
+  };
+
+  const handleOpenAreaForm = () => {
+    if (drawingAreaPoints.length < 3) {
+      alert("Areaは3点以上で作成してください");
+      return;
+    }
+
+    setShowAreaForm(true);
+  };
+
+  const handleSaveArea = async (area) => {
+    const coordinates = drawingAreaPoints.map((point) => [
+      point.longitude,
+      point.latitude,
+    ]);
+
+    const { data, error } = await supabase
+      .from("areas")
+      .insert({
+        ...area,
+        coordinates,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Area保存失敗:", error);
+      alert(`Areaを保存できませんでした\n${error.message}`);
+      return;
+    }
+
+    setAreaList((current) => [
+      ...current,
+      {
+        ...data,
+        flatCoordinates: data.coordinates.flat(),
+      },
+    ]);
+
+    setShowAreaForm(false);
+    setDrawingAreaPoints([]);
+    setEditingAreaVertexIndex(null);
+    setInteractionMode(InteractionMode.IDLE);
+
+    console.log("Area保存完了", data);
+  };
+
   const handleUpdateDiscovery = async (updatedDiscovery) => {
     const {
       imageFile,
@@ -894,6 +958,12 @@ function App() {
         edges={edgeList}
         discoveries={discoveryList}
         areas={areaList}
+
+        drawingAreaPoints={drawingAreaPoints}
+        setDrawingAreaPoints={setDrawingAreaPoints}
+        editingAreaVertexIndex={editingAreaVertexIndex}
+        setEditingAreaVertexIndex={setEditingAreaVertexIndex}
+
         place={place}
         setPlace={(selectedPlace) => {
           setPlace(selectedPlace);
@@ -1025,6 +1095,10 @@ function App() {
           interactionMode={interactionMode}
           onStartEdgeSplit={handleStartEdgeSplit}
           onCancelEdgeSplit={handleCancelEdgeSplit}
+
+          onStartAreaDrawing={handleStartAreaDrawing}
+          onStartAreaEditing={handleStartAreaEditing}
+          onOpenAreaForm={handleOpenAreaForm}
         />
       )}
 
@@ -1204,6 +1278,14 @@ function App() {
           }}
         />
       )}
+
+      {showAreaForm && (
+        <AreaForm
+          onSave={handleSaveArea}
+          onClose={() => setShowAreaForm(false)}
+        />
+      )}
+
       {import.meta.env.DEV && (
         <DeveloperTools />
       )}

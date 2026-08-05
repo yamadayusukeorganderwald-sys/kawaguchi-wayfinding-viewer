@@ -60,6 +60,11 @@ function MapViewer({
     discoveries,
     areas,
 
+    drawingAreaPoints,
+    setDrawingAreaPoints,
+    editingAreaVertexIndex,
+    setEditingAreaVertexIndex,
+
     place,
     setPlace,
     showRoute,
@@ -106,6 +111,7 @@ function MapViewer({
     const discoveryEntitiesRef = useRef([]);
     const routeEntitiesRef = useRef([]);
     const areaEntitiesRef = useRef([]);
+    const drawingAreaEntitiesRef = useRef([]);
     const clickedMarkerRef = useRef(null);
     const currentPlaceRef = useRef(place);
 
@@ -120,6 +126,7 @@ function MapViewer({
     const draggingPlacePositionRef = useRef(null);
     const splitPreviewPositionRef = useRef(null);
     const interactionModeRef = useRef(interactionMode);
+    const editingAreaVertexIndexRef = useRef(null);
     const splitTargetEdgeRef = useRef(splitTargetEdge);
     const placesRef = useRef(places);
     const splitEdgePreviewRefs = useRef([]);
@@ -135,6 +142,11 @@ function MapViewer({
     useEffect(() => {
         interactionModeRef.current = interactionMode;
     }, [interactionMode]);
+
+    useEffect(() => {
+        editingAreaVertexIndexRef.current =
+            editingAreaVertexIndex;
+    }, [editingAreaVertexIndex]);
 
     useEffect(() => {
         splitTargetEdgeRef.current = splitTargetEdge;
@@ -181,7 +193,8 @@ function MapViewer({
         const isMapInteractionLocked =
             interactionMode === InteractionMode.EDGE_SPLIT_SELECTING ||
             interactionMode === InteractionMode.EDGE_SPLIT_PLACING ||
-            interactionMode === InteractionMode.PLACE_DRAGGING;
+            interactionMode === InteractionMode.PLACE_DRAGGING ||
+            interactionMode === InteractionMode.AREA_VERTEX_DRAGGING;
 
         controller.enableRotate = !isMapInteractionLocked;
         controller.enableTranslate = !isMapInteractionLocked;
@@ -260,6 +273,35 @@ function MapViewer({
         handler.setInputAction((movement) => {
             const picked = viewer.scene.pick(movement.position);
 
+            const pickedEntityId = picked?.id?.id;
+
+            if (
+                interactionModeRef.current === InteractionMode.AREA_EDITING &&
+                typeof pickedEntityId === "string" &&
+                pickedEntityId.startsWith("area-vertex-")
+            ) {
+                const vertexIndex = Number(
+                    pickedEntityId.replace("area-vertex-", "")
+                );
+
+                if (Number.isNaN(vertexIndex)) return;
+
+                placeLongPressTimerRef.current = window.setTimeout(() => {
+                    editingAreaVertexIndexRef.current = vertexIndex;
+                    setEditingAreaVertexIndex(vertexIndex);
+                    setInteractionMode(
+                        InteractionMode.AREA_VERTEX_DRAGGING
+                    );
+
+                    console.log(
+                        "Area頂点ドラッグ開始:",
+                        vertexIndex
+                    );
+                }, 500);
+
+                return;
+            }
+
             if (!picked?.id?.place) {
                 return;
             }
@@ -310,6 +352,21 @@ function MapViewer({
 
             if (
                 interactionModeRef.current ===
+                InteractionMode.AREA_VERTEX_DRAGGING
+            ) {
+                editingAreaVertexIndexRef.current = null;
+                setEditingAreaVertexIndex(null);
+
+                setInteractionMode(
+                    InteractionMode.AREA_EDITING
+                );
+
+                console.log("Area頂点ドラッグ終了");
+                return;
+            }
+
+            if (
+                interactionModeRef.current ===
                 InteractionMode.PLACE_DRAGGING
             ) {
                 const draggedPlace = pressedPlaceRef.current;
@@ -335,6 +392,40 @@ function MapViewer({
         }, Cesium.ScreenSpaceEventType.LEFT_UP);
 
         handler.setInputAction((click) => {
+            if (
+                interactionModeRef.current ===
+                InteractionMode.AREA_DRAWING
+            ) {
+                let cartesian =
+                    viewer.scene.pickPosition(click.position);
+
+                if (!cartesian) {
+                    cartesian =
+                        viewer.camera.pickEllipsoid(
+                            click.position,
+                            viewer.scene.globe.ellipsoid
+                        );
+                }
+
+                if (!cartesian) return;
+
+                const cartographic =
+                    Cesium.Cartographic.fromCartesian(cartesian);
+
+                setDrawingAreaPoints((current) => [
+                    ...current,
+                    {
+                        longitude: Cesium.Math.toDegrees(
+                            cartographic.longitude
+                        ),
+                        latitude: Cesium.Math.toDegrees(
+                            cartographic.latitude
+                        ),
+                    },
+                ]);
+
+                return;
+            }
 
             // エッジ上の分割位置を確定
             if (
@@ -491,6 +582,57 @@ function MapViewer({
 
         handler.setInputAction((movement) => {
             const mode = interactionModeRef.current;
+
+            if (
+                mode === InteractionMode.AREA_VERTEX_DRAGGING
+            ) {
+                const vertexIndex =
+                    editingAreaVertexIndexRef.current;
+
+                if (
+                    vertexIndex === null ||
+                    vertexIndex === undefined
+                ) {
+                    return;
+                }
+
+                let cartesian =
+                    viewer.scene.pickPosition(
+                        movement.endPosition
+                    );
+
+                if (!cartesian) {
+                    cartesian =
+                        viewer.camera.pickEllipsoid(
+                            movement.endPosition,
+                            viewer.scene.globe.ellipsoid
+                        );
+                }
+
+                if (!cartesian) return;
+
+                const cartographic =
+                    Cesium.Cartographic.fromCartesian(cartesian);
+
+                const nextPoint = {
+                    longitude: Cesium.Math.toDegrees(
+                        cartographic.longitude
+                    ),
+                    latitude: Cesium.Math.toDegrees(
+                        cartographic.latitude
+                    ),
+                };
+
+                setDrawingAreaPoints((currentPoints) =>
+                    currentPoints.map((point, index) =>
+                        index === vertexIndex
+                            ? nextPoint
+                            : point
+                    )
+                );
+
+                return;
+            }
 
             // エッジ上の分割位置を選んでいる状態
             if (mode === InteractionMode.EDGE_SPLIT_SELECTING) {
@@ -1123,9 +1265,9 @@ function MapViewer({
                             : undefined,
 
                     material:
-                        Cesium.Color.RED.withAlpha(0.4),
+                        Cesium.Color.GREENYELLOW.withAlpha(0.2),
 
-                    outline: true,
+                    outline: false,
                     outlineColor: Cesium.Color.WHITE,
                 },
             });
@@ -1135,6 +1277,114 @@ function MapViewer({
         });
 
     }, [areas]);
+
+    useEffect(() => {
+        const viewer = viewerRef.current;
+
+        if (!viewer || viewer.isDestroyed()) return;
+
+        drawingAreaEntitiesRef.current.forEach((entity) => {
+            viewer.entities.remove(entity);
+        });
+
+        drawingAreaEntitiesRef.current = [];
+
+        const isAreaMode =
+            interactionMode === InteractionMode.AREA_DRAWING ||
+            interactionMode === InteractionMode.AREA_EDITING ||
+            interactionMode === InteractionMode.AREA_VERTEX_DRAGGING;
+
+        if (!isAreaMode || drawingAreaPoints.length === 0) {
+            return;
+        }
+
+        drawingAreaPoints.forEach((point, index) => {
+            const pointEntity = viewer.entities.add({
+                id: `area-vertex-${index}`,
+
+                position: Cesium.Cartesian3.fromDegrees(
+                    point.longitude,
+                    point.latitude,
+                    1
+                ),
+
+                point: {
+                    pixelSize: 8,
+                    color: Cesium.Color.YELLOW,
+                    outlineColor: Cesium.Color.BLACK,
+                    outlineWidth: 1,
+                    disableDepthTestDistance:
+                        Number.POSITIVE_INFINITY,
+                },
+            });
+
+            drawingAreaEntitiesRef.current.push(pointEntity);
+        });
+
+        if (drawingAreaPoints.length >= 2) {
+            const linePoints =
+                (
+                    interactionMode === InteractionMode.AREA_EDITING ||
+                    interactionMode === InteractionMode.AREA_VERTEX_DRAGGING
+                ) &&
+                    drawingAreaPoints.length >= 3
+                    ? [
+                        ...drawingAreaPoints,
+                        drawingAreaPoints[0],
+                    ]
+                    : drawingAreaPoints;
+
+            const linePositions = linePoints.map((point) =>
+                Cesium.Cartesian3.fromDegrees(
+                    point.longitude,
+                    point.latitude,
+                    1
+                )
+            );
+
+            const lineEntity = viewer.entities.add({
+                polyline: {
+                    positions: linePositions,
+                    width: 2,
+                    material: Cesium.Color.YELLOW,
+                    clampToGround: false,
+                },
+            });
+
+            drawingAreaEntitiesRef.current.push(lineEntity);
+        }
+
+        if (drawingAreaPoints.length >= 3) {
+            const flatCoordinates = drawingAreaPoints.flatMap(
+                (point) => [
+                    point.longitude,
+                    point.latitude,
+                ]
+            );
+
+            const polygonEntity = viewer.entities.add({
+                polygon: {
+                    hierarchy:
+                        Cesium.Cartesian3.fromDegreesArray(
+                            flatCoordinates
+                        ),
+
+                    height: 0.5,
+
+                    material:
+                        Cesium.Color.YELLOW.withAlpha(0.35),
+
+                    outline: true,
+                    outlineColor: Cesium.Color.YELLOW,
+                },
+            });
+
+            drawingAreaEntitiesRef.current.push(polygonEntity);
+        }
+    }, [
+        drawingAreaPoints,
+        interactionMode,
+    ]);
 
     const isPlacingSplit =
         interactionMode === InteractionMode.EDGE_SPLIT_PLACING;

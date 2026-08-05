@@ -23,6 +23,9 @@ function EdgeList({
     interactionMode,
     onStartEdgeSplit,
     onCancelEdgeSplit,
+    onStartAreaDrawing,
+    onStartAreaEditing,
+    onOpenAreaForm,
 }) {
     const [isOpen, setIsOpen] = useState(false);
 
@@ -75,6 +78,35 @@ function EdgeList({
                 }}
             >
                 ＋ Edge追加
+            </button>
+            <button
+                onClick={
+                    interactionMode === InteractionMode.AREA_DRAWING
+                        ? onStartAreaEditing
+                        : interactionMode === InteractionMode.AREA_EDITING
+                            ? onOpenAreaForm
+                            : onStartAreaDrawing
+                }
+                style={{
+                    marginBottom: "8px",
+                    width: "100%",
+                    padding: "8px",
+                    cursor: "pointer",
+                    background:
+                        interactionMode === InteractionMode.AREA_DRAWING
+                            ? "#fff3cd"
+                            : interactionMode === InteractionMode.AREA_EDITING
+                                ? "#d9f7df"
+                                : "#fff",
+                    border: "1px solid #ccc",
+                    borderRadius: "6px",
+                }}
+            >
+                {interactionMode === InteractionMode.AREA_DRAWING
+                    ? "✏ 形状修正"
+                    : interactionMode === InteractionMode.AREA_EDITING
+                        ? "✓ Area保存"
+                        : "▱ Area追加"}
             </button>
             <button
                 onClick={
