@@ -118,6 +118,11 @@ function MapViewer({
     const placeLongPressTimerRef = useRef(null);
     const pressedPlaceRef = useRef(null);
     const draggingPlaceEntityRef = useRef(null);
+
+    const placePressStartPositionRef = useRef(null);
+    const placeLongPressActivatedRef = useRef(false);
+    const suppressNextPlaceClickRef = useRef(false);
+
     const draggingConnectedEdgesRef = useRef([]);
 
     const splitPreviewRef = useRef(null);
@@ -202,6 +207,19 @@ function MapViewer({
         controller.enableTilt = !isMapInteractionLocked;
         controller.enableLook = !isMapInteractionLocked;
     }, [interactionMode]);
+
+    const cancelPlaceLongPress = () => {
+        if (placeLongPressTimerRef.current !== null) {
+            clearTimeout(placeLongPressTimerRef.current);
+            placeLongPressTimerRef.current = null;
+        }
+
+        placePressStartPositionRef.current = null;
+
+        if (!placeLongPressActivatedRef.current) {
+            pressedPlaceRef.current = null;
+        }
+    };
 
     useEffect(() => {
         const viewer = new Cesium.Viewer(cesiumContainer.current, {
@@ -306,7 +324,25 @@ function MapViewer({
                 return;
             }
 
+            // 通常時以外は地点長押し移動を開始しない
+            if (
+                interactionModeRef.current !==
+                InteractionMode.IDLE
+            ) {
+                return;
+            }
+
+            // 前回のタイマーが残っていたら解除
+            cancelPlaceLongPress();
+
             pressedPlaceRef.current = picked.id.place;
+
+            placePressStartPositionRef.current = {
+                x: movement.position.x,
+                y: movement.position.y,
+            };
+
+            placeLongPressActivatedRef.current = false;
 
             placeLongPressTimerRef.current = window.setTimeout(() => {
                 const pressedPlace = pressedPlaceRef.current;
@@ -314,10 +350,14 @@ function MapViewer({
                 if (!pressedPlace) return;
 
                 const draggingEntity = entitiesRef.current.find(
-                    (entity) => entity.place?.id === pressedPlace.id
+                    (entity) =>
+                        entity.place?.id === pressedPlace.id
                 );
 
                 if (!draggingEntity) return;
+
+                placeLongPressTimerRef.current = null;
+                placeLongPressActivatedRef.current = true;
 
                 draggingPlaceEntityRef.current = draggingEntity;
 
@@ -337,23 +377,26 @@ function MapViewer({
                     level: pressedPlace.level,
                 };
 
-                setPlace(pressedPlace);
-                setInteractionMode(InteractionMode.PLACE_DRAGGING);
+                // 地点移動開始時は選択地点を変更しない
+                interactionModeRef.current =
+                    InteractionMode.PLACE_DRAGGING;
+
+                setInteractionMode(
+                    InteractionMode.PLACE_DRAGGING
+                );
 
                 console.log("地点ドラッグ開始");
-            }, 500);
+            }, 650);
         }, Cesium.ScreenSpaceEventType.LEFT_DOWN);
 
         handler.setInputAction(() => {
-            if (placeLongPressTimerRef.current !== null) {
-                clearTimeout(placeLongPressTimerRef.current);
-                placeLongPressTimerRef.current = null;
-            }
+            cancelPlaceLongPress();
 
             if (
                 interactionModeRef.current ===
                 InteractionMode.AREA_VERTEX_DRAGGING
             ) {
+                suppressNextPlaceClickRef.current = true;
                 editingAreaVertexIndexRef.current = null;
                 setEditingAreaVertexIndex(null);
 
@@ -369,6 +412,8 @@ function MapViewer({
                 interactionModeRef.current ===
                 InteractionMode.PLACE_DRAGGING
             ) {
+                suppressNextPlaceClickRef.current = true;
+
                 const draggedPlace = pressedPlaceRef.current;
                 const draggedPosition = draggingPlacePositionRef.current;
 
@@ -383,15 +428,27 @@ function MapViewer({
                 draggingPlaceEntityRef.current = null;
                 draggingPlacePositionRef.current = null;
 
-                setInteractionMode(InteractionMode.IDLE);
+                interactionModeRef.current =
+                    InteractionMode.IDLE;
+
+                setInteractionMode(
+                    InteractionMode.IDLE
+                );
 
                 console.log("地点ドラッグ終了");
             }
 
             pressedPlaceRef.current = null;
+            placePressStartPositionRef.current = null;
+            placeLongPressActivatedRef.current = false;
         }, Cesium.ScreenSpaceEventType.LEFT_UP);
 
         handler.setInputAction((click) => {
+            if (suppressNextPlaceClickRef.current) {
+                suppressNextPlaceClickRef.current = false;
+                return;
+            }
+
             if (
                 interactionModeRef.current ===
                 InteractionMode.AREA_DRAWING
@@ -582,6 +639,30 @@ function MapViewer({
 
         handler.setInputAction((movement) => {
             const mode = interactionModeRef.current;
+
+            // 長押し成立前に指・マウスが動いたら、
+            // カメラ操作と判断して地点長押しをキャンセルする
+            if (
+                placeLongPressTimerRef.current !== null &&
+                placePressStartPositionRef.current
+            ) {
+                const start =
+                    placePressStartPositionRef.current;
+
+                const deltaX =
+                    movement.endPosition.x - start.x;
+
+                const deltaY =
+                    movement.endPosition.y - start.y;
+
+                const movedDistance =
+                    Math.hypot(deltaX, deltaY);
+
+                // 10pxを超えたら長押しではなく通常のドラッグ
+                if (movedDistance > 10) {
+                    cancelPlaceLongPress();
+                }
+            }
 
             if (
                 mode === InteractionMode.AREA_VERTEX_DRAGGING
