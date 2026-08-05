@@ -19,7 +19,12 @@ function Sidebar({
     setEditingPlace,
     onDeletePlace,
 
+    setEditingGeometry,
+    setShowGeometryForm,
+    onDeleteObject,
+
     selectedEdge,
+    selectedEntity,
     setSelectedEdge,
     onEditEdge,
     onDeleteEdge,
@@ -163,6 +168,75 @@ function Sidebar({
                             GPSから受信中
                         </p>
                     </section>
+
+                </>
+            ) : selectedEntity?.type === "object" ? (
+                <>
+
+                    <h2
+                        style={{
+                            fontSize: "18px",
+                            margin: "14px 0 6px",
+                        }}
+                    >
+                        {selectedEntity.data.name}
+                    </h2>
+
+                    <div
+                        style={{
+                            fontSize: "11px",
+                            color: "#666",
+                            marginBottom: "12px",
+                        }}
+                    >
+                        Object
+                    </div>
+
+                    <div
+                        style={{
+                            display: "flex",
+                            gap: "8px",
+                            marginBottom: "16px",
+                        }}
+                    >
+                        <button
+                            onClick={() => {
+                                setEditingGeometry(selectedEntity.data);
+                                setShowGeometryForm(true);
+                            }}
+                        >
+                            編集
+                        </button>
+
+                        <button
+                            onClick={() =>
+                                onDeleteObject(selectedEntity.data)
+                            }
+                        >
+                            削除
+                        </button>
+                    </div>
+
+                    <section style={{ marginBottom: "12px" }}>
+                        <h3 style={{ fontSize: "12px", margin: "0 0 4px" }}>
+                            種類
+                        </h3>
+
+                        <p style={{ margin: 0, fontSize: "12px" }}>
+                            {selectedEntity.data.object_type}
+                        </p>
+                    </section>
+
+                    <section style={{ marginBottom: "12px" }}>
+                        <h3 style={{ fontSize: "12px", margin: "0 0 4px" }}>
+                            高さ
+                        </h3>
+
+                        <p style={{ margin: 0, fontSize: "12px" }}>
+                            {selectedEntity.data.height} m
+                        </p>
+                    </section>
+
 
                 </>
             ) : selectedEdge ? (

@@ -10,6 +10,11 @@ import {
 function MobileBottomBar({
   place,
   selectedEdge,
+  selectedEntity,
+
+  setEditingGeometry,
+  setShowGeometryForm,
+  onDeleteObject,
   setShowPlaceForm,
   setEditingPlace,
   onDeletePlace,
@@ -25,13 +30,25 @@ function MobileBottomBar({
   if (
     !place &&
     !selectedEdge &&
+    !selectedEntity &&
     !isCurrentPositionSelected &&
     !clickedPosition
   ) {
     return null;
   }
 
+  const selectedObject =
+    selectedEntity?.type === "object"
+      ? selectedEntity.data
+      : null;
+
   const handleEdit = () => {
+    if (selectedObject) {
+      setEditingGeometry(selectedObject);
+      setShowGeometryForm(true);
+      return;
+    }
+
     if (selectedEdge) {
       onEditEdge(selectedEdge);
       return;
@@ -42,6 +59,11 @@ function MobileBottomBar({
   };
 
   const handleDelete = () => {
+    if (selectedObject) {
+      onDeleteObject(selectedObject);
+      return;
+    }
+
     if (selectedEdge) {
       onDeleteEdge(selectedEdge);
       return;
@@ -57,11 +79,13 @@ function MobileBottomBar({
 
   const displayName = isCurrentPositionSelected
     ? "現在地"
-    : selectedEdge
-      ? selectedEdge.road_name?.trim() || "名無しの道"
-      : isUnregisteredPosition
-        ? "未登録地点"
-        : place?.name ?? "地点未選択";
+    : selectedObject
+      ? selectedObject.name || "名称未設定Object"
+      : selectedEdge
+        ? selectedEdge.road_name?.trim() || "名無しの道"
+        : isUnregisteredPosition
+          ? "未登録地点"
+          : place?.name ?? "地点未選択";
 
   const displayDescription = isCurrentPositionSelected
     ? "今いるところ"
@@ -72,6 +96,7 @@ function MobileBottomBar({
   const detailsOpen =
     isCurrentPositionSelected ||
     isUnregisteredPosition ||
+    Boolean(selectedObject) ||
     showDetails;
 
   const actionButtonStyle = {
@@ -257,6 +282,35 @@ function MobileBottomBar({
               <strong>状態：</strong>
               未登録
             </div>
+          </div>
+        ) : selectedObject ? (
+          <div style={{ fontSize: "13px", lineHeight: 1.7 }}>
+            <div>
+              <strong>種類：</strong>
+              {selectedObject.object_type || "未設定"}
+            </div>
+
+            <div>
+              <strong>基準高さ：</strong>
+              {selectedObject.base_height ?? 0} m
+            </div>
+
+            <div>
+              <strong>高さ：</strong>
+              {selectedObject.height ?? 0} m
+            </div>
+
+            <div>
+              <strong>説明：</strong>
+              {selectedObject.description || "未記入"}
+            </div>
+
+            {selectedObject.is_space_shell && (
+              <div>
+                <strong>状態：</strong>
+                Space外殻
+              </div>
+            )}
           </div>
         ) : selectedEdge ? (
           <div style={{ fontSize: "13px", lineHeight: 1.6 }}>

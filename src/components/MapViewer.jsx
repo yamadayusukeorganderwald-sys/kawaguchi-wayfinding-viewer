@@ -59,11 +59,12 @@ function MapViewer({
     edges,
     discoveries,
     areas,
+    objects,
 
-    drawingAreaPoints,
-    setDrawingAreaPoints,
-    editingAreaVertexIndex,
-    setEditingAreaVertexIndex,
+    drawingGeometryPoints,
+    setDrawingGeometryPoints,
+    editingGeometryVertexIndex,
+    setEditingGeometryVertexIndex,
 
     place,
     setPlace,
@@ -78,7 +79,9 @@ function MapViewer({
     onMapClick,
     clickedPosition,
     onEdgeClick,
+    onObjectClick,
     selectedEdge,
+    selectedEntity,
     isMobile,
     onBackgroundClick,
     cameraResetRequest,
@@ -111,7 +114,8 @@ function MapViewer({
     const discoveryEntitiesRef = useRef([]);
     const routeEntitiesRef = useRef([]);
     const areaEntitiesRef = useRef([]);
-    const drawingAreaEntitiesRef = useRef([]);
+    const objectEntitiesRef = useRef([]);
+    const drawingGeometryEntitiesRef = useRef([]);
     const clickedMarkerRef = useRef(null);
     const currentPlaceRef = useRef(place);
 
@@ -131,7 +135,7 @@ function MapViewer({
     const draggingPlacePositionRef = useRef(null);
     const splitPreviewPositionRef = useRef(null);
     const interactionModeRef = useRef(interactionMode);
-    const editingAreaVertexIndexRef = useRef(null);
+    const editingGeometryVertexIndexRef = useRef(null);
     const splitTargetEdgeRef = useRef(splitTargetEdge);
     const placesRef = useRef(places);
     const splitEdgePreviewRefs = useRef([]);
@@ -149,9 +153,9 @@ function MapViewer({
     }, [interactionMode]);
 
     useEffect(() => {
-        editingAreaVertexIndexRef.current =
-            editingAreaVertexIndex;
-    }, [editingAreaVertexIndex]);
+        editingGeometryVertexIndexRef.current =
+            editingGeometryVertexIndex;
+    }, [editingGeometryVertexIndex]);
 
     useEffect(() => {
         splitTargetEdgeRef.current = splitTargetEdge;
@@ -199,7 +203,7 @@ function MapViewer({
             interactionMode === InteractionMode.EDGE_SPLIT_SELECTING ||
             interactionMode === InteractionMode.EDGE_SPLIT_PLACING ||
             interactionMode === InteractionMode.PLACE_DRAGGING ||
-            interactionMode === InteractionMode.AREA_VERTEX_DRAGGING;
+            interactionMode === InteractionMode.GEOMETRY_VERTEX_DRAGGING;
 
         controller.enableRotate = !isMapInteractionLocked;
         controller.enableTranslate = !isMapInteractionLocked;
@@ -294,21 +298,21 @@ function MapViewer({
             const pickedEntityId = picked?.id?.id;
 
             if (
-                interactionModeRef.current === InteractionMode.AREA_EDITING &&
+                interactionModeRef.current === InteractionMode.GEOMETRY_EDITING &&
                 typeof pickedEntityId === "string" &&
-                pickedEntityId.startsWith("area-vertex-")
+                pickedEntityId.startsWith("geometry-vertex-")
             ) {
                 const vertexIndex = Number(
-                    pickedEntityId.replace("area-vertex-", "")
+                    pickedEntityId.replace("geometry-vertex-", "")
                 );
 
                 if (Number.isNaN(vertexIndex)) return;
 
                 placeLongPressTimerRef.current = window.setTimeout(() => {
-                    editingAreaVertexIndexRef.current = vertexIndex;
-                    setEditingAreaVertexIndex(vertexIndex);
+                    editingGeometryVertexIndexRef.current = vertexIndex;
+                    setEditingGeometryVertexIndex(vertexIndex);
                     setInteractionMode(
-                        InteractionMode.AREA_VERTEX_DRAGGING
+                        InteractionMode.GEOMETRY_VERTEX_DRAGGING
                     );
 
                     console.log(
@@ -394,14 +398,14 @@ function MapViewer({
 
             if (
                 interactionModeRef.current ===
-                InteractionMode.AREA_VERTEX_DRAGGING
+                InteractionMode.GEOMETRY_VERTEX_DRAGGING
             ) {
                 suppressNextPlaceClickRef.current = true;
-                editingAreaVertexIndexRef.current = null;
-                setEditingAreaVertexIndex(null);
+                editingGeometryVertexIndexRef.current = null;
+                setEditingGeometryVertexIndex(null);
 
                 setInteractionMode(
-                    InteractionMode.AREA_EDITING
+                    InteractionMode.GEOMETRY_EDITING
                 );
 
                 console.log("Area頂点ドラッグ終了");
@@ -451,7 +455,7 @@ function MapViewer({
 
             if (
                 interactionModeRef.current ===
-                InteractionMode.AREA_DRAWING
+                InteractionMode.GEOMETRY_DRAWING
             ) {
                 let cartesian =
                     viewer.scene.pickPosition(click.position);
@@ -469,7 +473,7 @@ function MapViewer({
                 const cartographic =
                     Cesium.Cartographic.fromCartesian(cartesian);
 
-                setDrawingAreaPoints((current) => [
+                setDrawingGeometryPoints((current) => [
                     ...current,
                     {
                         longitude: Cesium.Math.toDegrees(
@@ -556,6 +560,12 @@ function MapViewer({
             // 🌱 Discoveryをクリック
             if (picked?.id?.discovery) {
                 setSelectedDiscovery(picked.id.discovery);
+                return;
+            }
+
+            // Objectをクリック
+            if (picked?.id?.object) {
+                onObjectClick?.(picked.id.object);
                 return;
             }
 
@@ -665,10 +675,10 @@ function MapViewer({
             }
 
             if (
-                mode === InteractionMode.AREA_VERTEX_DRAGGING
+                mode === InteractionMode.GEOMETRY_VERTEX_DRAGGING
             ) {
                 const vertexIndex =
-                    editingAreaVertexIndexRef.current;
+                    editingGeometryVertexIndexRef.current;
 
                 if (
                     vertexIndex === null ||
@@ -704,7 +714,7 @@ function MapViewer({
                     ),
                 };
 
-                setDrawingAreaPoints((currentPoints) =>
+                setDrawingGeometryPoints((currentPoints) =>
                     currentPoints.map((point, index) =>
                         index === vertexIndex
                             ? nextPoint
@@ -929,6 +939,9 @@ function MapViewer({
             edgeEntitiesRef.current = [];
             routeEntitiesRef.current = [];
             discoveryEntitiesRef.current = [];
+            areaEntitiesRef.current = [];
+            objectEntitiesRef.current = [];
+            drawingGeometryEntitiesRef.current = [];
         };
 
     }, []);
@@ -1364,24 +1377,96 @@ function MapViewer({
 
         if (!viewer || viewer.isDestroyed()) return;
 
-        drawingAreaEntitiesRef.current.forEach((entity) => {
+        // 以前のObjectを削除
+        objectEntitiesRef.current.forEach((entity) => {
             viewer.entities.remove(entity);
         });
 
-        drawingAreaEntitiesRef.current = [];
+        objectEntitiesRef.current = [];
+
+        console.log("objects", objects);
+
+        objects.forEach((object) => {
+            if (
+                !Array.isArray(object.coordinates) ||
+                object.coordinates.length < 3
+            ) {
+                console.warn(
+                    "Objectの座標が不正です:",
+                    object
+                );
+                return;
+            }
+
+            const flatCoordinates =
+                object.coordinates.flatMap(
+                    ([longitude, latitude]) => [
+                        longitude,
+                        latitude,
+                    ]
+                );
+
+            const baseHeight =
+                Number(object.base_height) || 0;
+
+            const height =
+                Number(object.height) || 0;
+
+            const entity = viewer.entities.add({
+                name: object.name,
+
+                polygon: {
+                    hierarchy:
+                        Cesium.Cartesian3.fromDegreesArray(
+                            flatCoordinates
+                        ),
+
+                    height: baseHeight,
+
+                    extrudedHeight:
+                        baseHeight + height,
+
+                    material:
+                        selectedEntity?.type === "object" &&
+                            selectedEntity.data.id === object.id
+                            ? Cesium.Color.LIGHTGRAY.withAlpha(0.25)
+                            : Cesium.Color.LIGHTGRAY.withAlpha(1),
+
+                    outline: true,
+                    outlineColor:
+                        Cesium.Color.DARKGRAY,
+                },
+            });
+
+            entity.object = object;
+
+            objectEntitiesRef.current.push(entity);
+        });
+    }, [objects, selectedEntity]);
+
+    useEffect(() => {
+        const viewer = viewerRef.current;
+
+        if (!viewer || viewer.isDestroyed()) return;
+
+        drawingGeometryEntitiesRef.current.forEach((entity) => {
+            viewer.entities.remove(entity);
+        });
+
+        drawingGeometryEntitiesRef.current = [];
 
         const isAreaMode =
-            interactionMode === InteractionMode.AREA_DRAWING ||
-            interactionMode === InteractionMode.AREA_EDITING ||
-            interactionMode === InteractionMode.AREA_VERTEX_DRAGGING;
+            interactionMode === InteractionMode.GEOMETRY_DRAWING ||
+            interactionMode === InteractionMode.GEOMETRY_EDITING ||
+            interactionMode === InteractionMode.GEOMETRY_VERTEX_DRAGGING;
 
-        if (!isAreaMode || drawingAreaPoints.length === 0) {
+        if (!isAreaMode || drawingGeometryPoints.length === 0) {
             return;
         }
 
-        drawingAreaPoints.forEach((point, index) => {
+        drawingGeometryPoints.forEach((point, index) => {
             const pointEntity = viewer.entities.add({
-                id: `area-vertex-${index}`,
+                id: `geometry-vertex-${index}`,
 
                 position: Cesium.Cartesian3.fromDegrees(
                     point.longitude,
@@ -1399,21 +1484,21 @@ function MapViewer({
                 },
             });
 
-            drawingAreaEntitiesRef.current.push(pointEntity);
+            drawingGeometryEntitiesRef.current.push(pointEntity);
         });
 
-        if (drawingAreaPoints.length >= 2) {
+        if (drawingGeometryPoints.length >= 2) {
             const linePoints =
                 (
-                    interactionMode === InteractionMode.AREA_EDITING ||
-                    interactionMode === InteractionMode.AREA_VERTEX_DRAGGING
+                    interactionMode === InteractionMode.GEOMETRY_EDITING ||
+                    interactionMode === InteractionMode.GEOMETRY_VERTEX_DRAGGING
                 ) &&
-                    drawingAreaPoints.length >= 3
+                    drawingGeometryPoints.length >= 3
                     ? [
-                        ...drawingAreaPoints,
-                        drawingAreaPoints[0],
+                        ...drawingGeometryPoints,
+                        drawingGeometryPoints[0],
                     ]
-                    : drawingAreaPoints;
+                    : drawingGeometryPoints;
 
             const linePositions = linePoints.map((point) =>
                 Cesium.Cartesian3.fromDegrees(
@@ -1432,11 +1517,11 @@ function MapViewer({
                 },
             });
 
-            drawingAreaEntitiesRef.current.push(lineEntity);
+            drawingGeometryEntitiesRef.current.push(lineEntity);
         }
 
-        if (drawingAreaPoints.length >= 3) {
-            const flatCoordinates = drawingAreaPoints.flatMap(
+        if (drawingGeometryPoints.length >= 3) {
+            const flatCoordinates = drawingGeometryPoints.flatMap(
                 (point) => [
                     point.longitude,
                     point.latitude,
@@ -1460,10 +1545,10 @@ function MapViewer({
                 },
             });
 
-            drawingAreaEntitiesRef.current.push(polygonEntity);
+            drawingGeometryEntitiesRef.current.push(polygonEntity);
         }
     }, [
-        drawingAreaPoints,
+        drawingGeometryPoints,
         interactionMode,
     ]);
 

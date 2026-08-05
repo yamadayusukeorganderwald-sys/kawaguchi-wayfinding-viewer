@@ -16,7 +16,7 @@ import { createImageFileName } from "./utils/imageFileName";
 import DeveloperTools from "./components/DeveloperTools";
 import { InteractionMode } from "./constants/interactionMode";
 import { loadAreas } from "./data/areas";
-import AreaForm from "./components/AreaForm";
+import GeometryForm from "./components/GeometryForm";
 
 const toAppEdge = (edge) => ({
   id: edge.id,
@@ -97,14 +97,22 @@ function App() {
   const [showEdgeForm, setShowEdgeForm] = useState(false);
   const [editingEdge, setEditingEdge] = useState(null);
   const [selectedEdge, setSelectedEdge] = useState(null);
+
+  const [selectedEntity, setSelectedEntity] = useState(null);
+
   const [initialEdge, setInitialEdge] = useState(null);
 
   const [discoveryList, setDiscoveryList] = useState([]);
   const [pendingDiscovery, setPendingDiscovery] = useState(null);
+
   const [areaList, setAreaList] = useState([]);
-  const [drawingAreaPoints, setDrawingAreaPoints] = useState([]);
-  const [showAreaForm, setShowAreaForm] = useState(false);
-  const [editingAreaVertexIndex, setEditingAreaVertexIndex] = useState(null);
+  const [objectList, setObjectList] = useState([]);
+  const [spaceList, setSpaceList] = useState([]);
+
+  const [drawingGeometryPoints, setDrawingGeometryPoints] = useState([]);
+  const [showGeometryForm, setShowGeometryForm] = useState(false);
+  const [editingGeometry, setEditingGeometry] = useState(null);
+  const [editingGeometryVertexIndex, setEditingGeometryVertexIndex] = useState(null);
 
   const [interactionMode, setInteractionMode] =
     useState(InteractionMode.IDLE);
@@ -209,6 +217,50 @@ function App() {
           setAreaList([]);
         }
 
+        // Objects
+        try {
+          const { data: objects, error: objectsError } =
+            await supabase
+              .from("objects")
+              .select("*");
+
+          if (objectsError) {
+            throw objectsError;
+          }
+
+          console.log("objects", objects);
+          setObjectList(objects ?? []);
+        } catch (objectError) {
+          console.error(
+            "objectsの取得に失敗:",
+            objectError
+          );
+
+          setObjectList([]);
+        }
+
+        // Spaces
+        try {
+          const { data: spaces, error: spacesError } =
+            await supabase
+              .from("spaces")
+              .select("*");
+
+          if (spacesError) {
+            throw spacesError;
+          }
+
+          console.log("spaces", spaces);
+          setSpaceList(spaces ?? []);
+        } catch (spaceError) {
+          console.error(
+            "spacesの取得に失敗:",
+            spaceError
+          );
+
+          setSpaceList([]);
+        }
+
       } catch (error) {
         console.error("初期データの取得中にエラー:", error);
       } finally {
@@ -308,6 +360,23 @@ function App() {
 
   const handleEdgeClick = (edge) => {
     setSelectedEdge(edge);
+
+    setSelectedEntity({
+      type: "edge",
+      data: edge,
+    });
+
+    setIsCurrentPositionSelected(false);
+    setClickedPosition(null);
+  };
+
+  const handleObjectClick = (object) => {
+    setSelectedEntity({
+      type: "object",
+      data: object,
+    });
+
+    setSelectedEdge(null);
     setIsCurrentPositionSelected(false);
     setClickedPosition(null);
   };
@@ -674,64 +743,506 @@ function App() {
     }
   };
 
-  const handleStartAreaDrawing = () => {
-    setDrawingAreaPoints([]);
-    setInteractionMode(InteractionMode.AREA_DRAWING);
+  const handleStartGeometryDrawing = () => {
+    setDrawingGeometryPoints([]);
+    setInteractionMode(
+      InteractionMode.GEOMETRY_DRAWING
+    );
   };
 
-  const handleStartAreaEditing = () => {
-    if (drawingAreaPoints.length < 3) {
-      alert("Areaは3点以上で作成してください");
+  const handleStartGeometryEditing = () => {
+    if (drawingGeometryPoints.length < 3) {
+      alert("形状は3点以上で作成してください");
       return;
     }
 
-    setInteractionMode(InteractionMode.AREA_EDITING);
+    setInteractionMode(
+      InteractionMode.GEOMETRY_EDITING
+    );
   };
 
-  const handleOpenAreaForm = () => {
-    if (drawingAreaPoints.length < 3) {
-      alert("Areaは3点以上で作成してください");
+  const handleOpenGeometryForm = () => {
+    if (drawingGeometryPoints.length < 3) {
+      alert("形状は3点以上で作成してください");
       return;
     }
 
-    setShowAreaForm(true);
+    setShowGeometryForm(true);
   };
 
-  const handleSaveArea = async (area) => {
-    const coordinates = drawingAreaPoints.map((point) => [
-      point.longitude,
-      point.latitude,
-    ]);
+  const resetGeometryEditing = () => {
+    setShowGeometryForm(false);
+    setEditingGeometry(null);
+    setDrawingGeometryPoints([]);
+    setEditingGeometryVertexIndex(null);
+    setInteractionMode(InteractionMode.IDLE);
+  };
+
+  const createArea = async (geometry, options = {}) => {
+    const coordinates =
+      options.coordinates ??
+      drawingGeometryPoints.map((point) => [
+        point.longitude,
+        point.latitude,
+      ]);
+
+    const {
+      geometryKind,
+      geometryType,
+      ...commonData
+    } = geometry;
 
     const { data, error } = await supabase
       .from("areas")
       .insert({
-        ...area,
+        ...commonData,
+        area_type: geometryType,
         coordinates,
+
+        space_id:
+          options.spaceId ?? null,
+
+        visibility_mode:
+          options.visibilityMode ??
+          "always",
       })
       .select()
       .single();
 
     if (error) {
-      console.error("Area保存失敗:", error);
-      alert(`Areaを保存できませんでした\n${error.message}`);
+      throw error;
+    }
+
+    return {
+      ...data,
+      flatCoordinates:
+        data.coordinates.flat(),
+    };
+  };
+
+  const createObject = async (
+    geometry,
+    options = {}
+  ) => {
+    const coordinates =
+      options.coordinates ??
+      drawingGeometryPoints.map((point) => [
+        point.longitude,
+        point.latitude,
+      ]);
+
+    const {
+      geometryKind,
+      geometryType,
+      extruded_height,
+      ...commonData
+    } = geometry;
+
+    const { data, error } = await supabase
+      .from("objects")
+      .insert({
+        ...commonData,
+        object_type: geometryType,
+        coordinates,
+        height: extruded_height,
+
+        space_id:
+          options.spaceId ?? null,
+
+        is_space_shell:
+          options.isSpaceShell ?? false,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  };
+
+  const shrinkCoordinates = (
+    coordinates,
+    scale = 0.96
+  ) => {
+    const center = coordinates.reduce(
+      (result, [longitude, latitude]) => ({
+        longitude:
+          result.longitude + longitude,
+        latitude:
+          result.latitude + latitude,
+      }),
+      {
+        longitude: 0,
+        latitude: 0,
+      }
+    );
+
+    center.longitude /= coordinates.length;
+    center.latitude /= coordinates.length;
+
+    return coordinates.map(
+      ([longitude, latitude]) => [
+        center.longitude +
+        (longitude - center.longitude) * scale,
+
+        center.latitude +
+        (latitude - center.latitude) * scale,
+      ]
+    );
+  };
+
+  const createSpace = async (geometry) => {
+    const {
+      geometryKind,
+      geometryType,
+      name,
+      description,
+    } = geometry;
+
+    const { data, error } = await supabase
+      .from("spaces")
+      .insert({
+        name,
+        space_type: geometryType,
+        description,
+        parent_space_id: null,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  };
+
+  const handleSaveGeometry = async (geometry) => {
+    if (
+      editingGeometry &&
+      geometry.geometryKind === "object"
+    ) {
+      return handleUpdateObject(geometry);
+    }
+    if (geometry.geometryKind === "area") {
+      return handleSaveArea(geometry);
+    }
+
+    if (geometry.geometryKind === "object") {
+      return handleSaveObject(geometry);
+    }
+
+    if (geometry.geometryKind === "space") {
+      return handleSaveSpace(geometry);
+    }
+
+    console.error(
+      "不明な形状種別です:",
+      geometry.geometryKind
+    );
+
+    alert("保存種類を判定できませんでした");
+  };
+
+  const handleSaveArea = async (
+    geometry
+  ) => {
+    try {
+      const area =
+        await createArea(geometry);
+
+      setAreaList((current) => [
+        ...current,
+        area,
+      ]);
+
+      resetGeometryEditing();
+
+      console.log(
+        "Area保存完了",
+        area
+      );
+    } catch (error) {
+      console.error(
+        "Area保存失敗:",
+        error
+      );
+
+      alert(
+        `Areaを保存できませんでした\n${error.message}`
+      );
+    }
+  };
+
+  const handleSaveObject = async (
+    geometry
+  ) => {
+    try {
+      const object =
+        await createObject(geometry);
+
+      setObjectList((current) => [
+        ...current,
+        object,
+      ]);
+
+      resetGeometryEditing();
+
+      console.log(
+        "Object保存完了",
+        object
+      );
+    } catch (error) {
+      console.error(
+        "Object保存失敗:",
+        error
+      );
+
+      alert(
+        `Objectを保存できませんでした\n${error.message}`
+      );
+    }
+  };
+
+  const handleUpdateObject = async (geometry) => {
+    const {
+      id,
+      geometryKind,
+      geometryType,
+      extruded_height,
+      ...commonData
+    } = geometry;
+
+    const { data, error } = await supabase
+      .from("objects")
+      .update({
+        ...commonData,
+        object_type: geometryType,
+        height: extruded_height,
+      })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error(
+        "Object更新失敗:",
+        error
+      );
+
+      alert(
+        `Objectを更新できませんでした\n${error.message}`
+      );
+
       return;
     }
 
-    setAreaList((current) => [
-      ...current,
-      {
-        ...data,
-        flatCoordinates: data.coordinates.flat(),
-      },
-    ]);
+    setObjectList((current) =>
+      current.map((object) =>
+        object.id === data.id
+          ? data
+          : object
+      )
+    );
 
-    setShowAreaForm(false);
-    setDrawingAreaPoints([]);
-    setEditingAreaVertexIndex(null);
-    setInteractionMode(InteractionMode.IDLE);
+    setSelectedEntity({
+      type: "object",
+      data,
+    });
 
-    console.log("Area保存完了", data);
+    setEditingGeometry(null);
+    resetGeometryEditing();
+
+    console.log(
+      "Object更新完了",
+      data
+    );
+  };
+
+  const handleDeleteObject = async (targetObject) => {
+    const confirmed = window.confirm(
+      `「${targetObject.name}」を削除しますか？`
+    );
+
+    if (!confirmed) return;
+
+    const isSpaceShell =
+      targetObject.is_space_shell &&
+      targetObject.space_id;
+
+    try {
+      if (isSpaceShell) {
+        // Space外殻ObjectならSpaceごと削除
+        const { error: spaceError } = await supabase
+          .from("spaces")
+          .delete()
+          .eq("id", targetObject.space_id);
+
+        if (spaceError) {
+          throw spaceError;
+        }
+
+        setSpaceList((current) =>
+          current.filter(
+            (space) => space.id !== targetObject.space_id
+          )
+        );
+
+        setObjectList((current) =>
+          current.filter(
+            (object) =>
+              object.space_id !== targetObject.space_id
+          )
+        );
+
+        setAreaList((current) =>
+          current.filter(
+            (area) =>
+              area.space_id !== targetObject.space_id
+          )
+        );
+      } else {
+        // 単独ObjectならObjectだけ削除
+        const { error: objectError } = await supabase
+          .from("objects")
+          .delete()
+          .eq("id", targetObject.id);
+
+        if (objectError) {
+          throw objectError;
+        }
+
+        setObjectList((current) =>
+          current.filter(
+            (object) => object.id !== targetObject.id
+          )
+        );
+      }
+
+      setSelectedEntity(null);
+      setEditingGeometry(null);
+
+      console.log("Object削除完了", targetObject);
+    } catch (error) {
+      console.error("Object削除失敗:", error);
+
+      alert(
+        `Objectを削除できませんでした\n${error.message}`
+      );
+    }
+  };
+
+  const handleSaveSpace = async (geometry) => {
+    let createdSpace = null;
+    let createdObject = null;
+    let createdArea = null;
+
+    try {
+      const outerCoordinates =
+        drawingGeometryPoints.map((point) => [
+          point.longitude,
+          point.latitude,
+        ]);
+
+      const innerCoordinates =
+        shrinkCoordinates(
+          outerCoordinates,
+          0.96
+        );
+
+      // ① Space本体を作る
+      createdSpace =
+        await createSpace(geometry);
+
+      // ② 外殻Objectを作る
+      createdObject =
+        await createObject(
+          geometry,
+          {
+            spaceId: createdSpace.id,
+            isSpaceShell: true,
+            coordinates:
+              outerCoordinates,
+          }
+        );
+
+      // ③ 内部Areaを作る
+      createdArea =
+        await createArea(
+          {
+            ...geometry,
+            geometryType: "passage",
+            name: `${geometry.name} 内部`,
+            extruded_height: 0,
+          },
+          {
+            spaceId: createdSpace.id,
+            visibilityMode:
+              "parent_selected",
+            coordinates:
+              innerCoordinates,
+          }
+        );
+
+      setSpaceList((current) => [
+        ...current,
+        createdSpace,
+      ]);
+
+      setObjectList((current) => [
+        ...current,
+        createdObject,
+      ]);
+
+      setAreaList((current) => [
+        ...current,
+        createdArea,
+      ]);
+
+      resetGeometryEditing();
+
+      console.log(
+        "Space保存完了",
+        {
+          space: createdSpace,
+          object: createdObject,
+          area: createdArea,
+        }
+      );
+    } catch (error) {
+      console.error(
+        "Space保存失敗:",
+        error
+      );
+
+      // 途中まで作成された場合の掃除
+      if (createdArea?.id) {
+        await supabase
+          .from("areas")
+          .delete()
+          .eq("id", createdArea.id);
+      }
+
+      if (createdObject?.id) {
+        await supabase
+          .from("objects")
+          .delete()
+          .eq("id", createdObject.id);
+      }
+
+      if (createdSpace?.id) {
+        await supabase
+          .from("spaces")
+          .delete()
+          .eq("id", createdSpace.id);
+      }
+
+      alert(
+        `Spaceを保存できませんでした\n${error.message}`
+      );
+    }
   };
 
   const handleUpdateDiscovery = async (updatedDiscovery) => {
@@ -940,7 +1451,12 @@ function App() {
             isMobile={isMobile}
             clickedPosition={clickedPosition}
 
+            setEditingGeometry={setEditingGeometry}
+            setShowGeometryForm={setShowGeometryForm}
+            onDeleteObject={handleDeleteObject}
+
             selectedEdge={selectedEdge}
+            selectedEntity={selectedEntity}
             setSelectedEdge={setSelectedEdge}
             onEditEdge={(edge) => {
               setEditingEdge(edge);
@@ -958,15 +1474,22 @@ function App() {
         edges={edgeList}
         discoveries={discoveryList}
         areas={areaList}
+        objects={objectList}
 
-        drawingAreaPoints={drawingAreaPoints}
-        setDrawingAreaPoints={setDrawingAreaPoints}
-        editingAreaVertexIndex={editingAreaVertexIndex}
-        setEditingAreaVertexIndex={setEditingAreaVertexIndex}
+        drawingGeometryPoints={drawingGeometryPoints}
+        setDrawingGeometryPoints={setDrawingGeometryPoints}
+        editingGeometryVertexIndex={editingGeometryVertexIndex}
+        setEditingGeometryVertexIndex={setEditingGeometryVertexIndex}
 
         place={place}
         setPlace={(selectedPlace) => {
           setPlace(selectedPlace);
+
+          setSelectedEntity({
+            type: "place",
+            data: selectedPlace,
+          });
+
           setSelectedEdge(null);
           setIsCurrentPositionSelected(false);
           setClickedPosition(null);
@@ -978,7 +1501,9 @@ function App() {
         onMapClick={setClickedPosition}
         clickedPosition={clickedPosition}
         onEdgeClick={handleEdgeClick}
+        onObjectClick={handleObjectClick}
         selectedEdge={selectedEdge}
+        selectedEntity={selectedEntity}
         isMobile={isMobile}
         gpsEnabled={gpsEnabled}
         setGpsEnabled={setGpsEnabled}
@@ -1010,6 +1535,7 @@ function App() {
         cameraResetRequest={cameraResetRequest}
         onBackgroundClick={() => {
           setSelectedEdge(null);
+          setSelectedEntity(null);
           setIsCurrentPositionSelected(false);
 
           if (isMobile) {
@@ -1022,8 +1548,15 @@ function App() {
         <MobileBottomBar
           place={place}
           selectedEdge={selectedEdge}
+          selectedEntity={selectedEntity}
+
           isCurrentPositionSelected={isCurrentPositionSelected}
           currentPosition={currentPosition}
+
+          setEditingGeometry={setEditingGeometry}
+          setShowGeometryForm={setShowGeometryForm}
+          onDeleteObject={handleDeleteObject}
+
           setShowPlaceForm={setShowPlaceForm}
           setEditingPlace={setEditingPlace}
           onDeletePlace={handleDeletePlace}
@@ -1048,10 +1581,16 @@ function App() {
             interactionMode === InteractionMode.EDGE_SPLIT_CONFIRMING
           }
 
+          interactionMode={interactionMode}
+
           hasRouteAnchor={Boolean(routeAnchor)}
           showRoute={showRoute}
 
           onAdd={handleMobileAdd}
+
+          onStartGeometryDrawing={handleStartGeometryDrawing}
+          onStartGeometryEditing={handleStartGeometryEditing}
+          onOpenGeometryForm={handleOpenGeometryForm}
 
           onSplitEdge={handleStartEdgeSplit}
           onCancelSplit={handleCancelEdgeSplit}
@@ -1096,9 +1635,9 @@ function App() {
           onStartEdgeSplit={handleStartEdgeSplit}
           onCancelEdgeSplit={handleCancelEdgeSplit}
 
-          onStartAreaDrawing={handleStartAreaDrawing}
-          onStartAreaEditing={handleStartAreaEditing}
-          onOpenAreaForm={handleOpenAreaForm}
+          onStartGeometryDrawing={handleStartGeometryDrawing}
+          onStartGeometryEditing={handleStartGeometryEditing}
+          onOpenGeometryForm={handleOpenGeometryForm}
         />
       )}
 
@@ -1279,10 +1818,13 @@ function App() {
         />
       )}
 
-      {showAreaForm && (
-        <AreaForm
-          onSave={handleSaveArea}
-          onClose={() => setShowAreaForm(false)}
+      {showGeometryForm && (
+        <GeometryForm
+          editingGeometry={editingGeometry}
+          onSave={handleSaveGeometry}
+          onClose={() =>
+            setShowGeometryForm(false)
+          }
         />
       )}
 

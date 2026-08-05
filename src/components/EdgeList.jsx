@@ -23,9 +23,9 @@ function EdgeList({
     interactionMode,
     onStartEdgeSplit,
     onCancelEdgeSplit,
-    onStartAreaDrawing,
-    onStartAreaEditing,
-    onOpenAreaForm,
+    onStartGeometryDrawing,
+    onStartGeometryEditing,
+    onOpenGeometryForm,
 }) {
     const [isOpen, setIsOpen] = useState(false);
 
@@ -81,11 +81,11 @@ function EdgeList({
             </button>
             <button
                 onClick={
-                    interactionMode === InteractionMode.AREA_DRAWING
-                        ? onStartAreaEditing
-                        : interactionMode === InteractionMode.AREA_EDITING
-                            ? onOpenAreaForm
-                            : onStartAreaDrawing
+                    interactionMode === InteractionMode.GEOMETRY_DRAWING
+                        ? onStartGeometryEditing
+                        : interactionMode === InteractionMode.GEOMETRY_EDITING
+                            ? onOpenGeometryForm
+                            : onStartGeometryDrawing
                 }
                 style={{
                     marginBottom: "8px",
@@ -93,20 +93,20 @@ function EdgeList({
                     padding: "8px",
                     cursor: "pointer",
                     background:
-                        interactionMode === InteractionMode.AREA_DRAWING
+                        interactionMode === InteractionMode.GEOMETRY_DRAWING
                             ? "#fff3cd"
-                            : interactionMode === InteractionMode.AREA_EDITING
+                            : interactionMode === InteractionMode.GEOMETRY_EDITING
                                 ? "#d9f7df"
                                 : "#fff",
                     border: "1px solid #ccc",
                     borderRadius: "6px",
                 }}
             >
-                {interactionMode === InteractionMode.AREA_DRAWING
+                {interactionMode === InteractionMode.GEOMETRY_DRAWING
                     ? "✏ 形状修正"
-                    : interactionMode === InteractionMode.AREA_EDITING
-                        ? "✓ Area保存"
-                        : "▱ Area追加"}
+                    : interactionMode === InteractionMode.GEOMETRY_EDITING
+                        ? "✓ 形状保存"
+                        : "▱ 形状追加"}
             </button>
             <button
                 onClick={
