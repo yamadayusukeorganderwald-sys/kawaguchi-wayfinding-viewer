@@ -1483,11 +1483,7 @@ function MapViewer({
                             ? baseHeight + extrudedHeight
                             : undefined,
 
-                    material:
-                        selectedEntity?.type === "area" &&
-                            selectedEntity.data.id === area.id
-                            ? Cesium.Color.RED.withAlpha(0.6)
-                            : Cesium.Color.RED.withAlpha(0.3),
+                    material: Cesium.Color.RED.withAlpha(0.3),
 
                     outline: false,
                     outlineColor: Cesium.Color.WHITE,
@@ -1498,7 +1494,26 @@ function MapViewer({
             areaEntitiesRef.current.push(entity);
         });
 
-    }, [areas, selectedEntity]);
+    }, [areas]);
+
+    useEffect(() => {
+        const viewer = viewerRef.current;
+
+        if (!viewer || viewer.isDestroyed()) return;
+
+        areaEntitiesRef.current.forEach((entity) => {
+            if (!entity.area || !entity.polygon) return;
+
+            const isSelected =
+                selectedEntity?.type === "area" &&
+                selectedEntity.data?.id === entity.area.id;
+
+            entity.polygon.material =
+                isSelected
+                    ? Cesium.Color.RED.withAlpha(0.6)
+                    : Cesium.Color.RED.withAlpha(0.3);
+        });
+    }, [selectedEntity]);
 
     useEffect(() => {
         const viewer = viewerRef.current;
@@ -1554,11 +1569,7 @@ function MapViewer({
                     extrudedHeight:
                         baseHeight + height,
 
-                    material:
-                        selectedEntity?.type === "object" &&
-                            selectedEntity.data.id === object.id
-                            ? Cesium.Color.LIGHTGRAY.withAlpha(0.25)
-                            : Cesium.Color.LIGHTGRAY.withAlpha(1),
+                    material: Cesium.Color.LIGHTGRAY.withAlpha(1),
 
                     outline: true,
                     outlineColor:
@@ -1570,7 +1581,26 @@ function MapViewer({
 
             objectEntitiesRef.current.push(entity);
         });
-    }, [objects, selectedEntity]);
+    }, [objects]);
+
+    useEffect(() => {
+        const viewer = viewerRef.current;
+
+        if (!viewer || viewer.isDestroyed()) return;
+
+        objectEntitiesRef.current.forEach((entity) => {
+            if (!entity.object || !entity.polygon) return;
+
+            const isSelected =
+                selectedEntity?.type === "object" &&
+                selectedEntity.data?.id === entity.object.id;
+
+            entity.polygon.material =
+                isSelected
+                    ? Cesium.Color.LIGHTGRAY.withAlpha(0.25)
+                    : Cesium.Color.LIGHTGRAY.withAlpha(1);
+        });
+    }, [selectedEntity]);
 
     useEffect(() => {
         const viewer = viewerRef.current;
@@ -1712,8 +1742,6 @@ function MapViewer({
 
             if (!fromPlace || !toPlace) return;
 
-            const isSelected = selectedEdge?.id === edge.id;
-
             const entity = viewer.entities.add({
                 polyline: {
                     positions: [
@@ -1729,16 +1757,14 @@ function MapViewer({
                         ),
                     ],
 
-                    material: isSelected
-                        ? Cesium.Color.CYAN.withAlpha(1)
-                        : Cesium.Color.WHITE.withAlpha(0.75),
-
-                    width: isSelected ? 6 : 3,
+                    material: Cesium.Color.WHITE.withAlpha(0.75),
+                    width: 3,
                     clampToGround: false
                 },
             });
 
             entity.edge = edge;
+            entity.isEdgeHitArea = false;
             edgeEntitiesRef.current.push(entity);
 
             const hitEntity = viewer.entities.add({
@@ -1763,16 +1789,40 @@ function MapViewer({
             });
 
             hitEntity.edge = edge;
+            hitEntity.isEdgeHitArea = true;
             edgeEntitiesRef.current.push(hitEntity);
         });
 
     }, [
         edges,
         places,
-        selectedEdge,
         isPlacingSplit,
         splitTargetEdge,
     ]);
+
+    useEffect(() => {
+        const viewer = viewerRef.current;
+
+        if (!viewer || viewer.isDestroyed()) return;
+
+        edgeEntitiesRef.current.forEach((entity) => {
+            if (!entity.edge || !entity.polyline) return;
+
+            // 透明なクリック判定用線は見た目を変えない
+            if (entity.isEdgeHitArea) return;
+
+            const isSelected =
+                selectedEdge?.id === entity.edge.id;
+
+            entity.polyline.material =
+                isSelected
+                    ? Cesium.Color.CYAN.withAlpha(1)
+                    : Cesium.Color.WHITE.withAlpha(0.75);
+
+            entity.polyline.width =
+                isSelected ? 6 : 3;
+        });
+    }, [selectedEdge]);
 
     useEffect(() => {
         const viewer = viewerRef.current;
