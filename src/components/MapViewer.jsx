@@ -1207,20 +1207,20 @@ function MapViewer({
 
                         outlineColor: Cesium.Color.BLACK,
                         outlineWidth: 1,
-                        disableDepthTestDistance:
-                            Number.POSITIVE_INFINITY,
+                        disableDepthTestDistance: 0,
                     },
 
                 label: isJunction
                     ? undefined
                     : {
                         text: item.name,
-                        font: "16px sans-serif",
-                        pixelOffset: new Cesium.Cartesian2(0, -35),
+                        font: "12px sans-serif",
+                        pixelOffset: new Cesium.Cartesian2(20, -20),
                         fillColor: Cesium.Color.WHITE,
                         outlineColor: Cesium.Color.BLACK,
                         outlineWidth: 3,
                         style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+                        disableDepthTestDistance: Number.POSITIVE_INFINITY,
                     },
 
                 billboard: isJunction
@@ -1230,7 +1230,7 @@ function MapViewer({
                         height: isSelected ? 20 : 13,
                         verticalOrigin: Cesium.VerticalOrigin.CENTER,
                         horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
-                        disableDepthTestDistance: Number.POSITIVE_INFINITY,
+                        disableDepthTestDistance: 0,
                     }
                     : undefined,
             });
@@ -1262,6 +1262,124 @@ function MapViewer({
             }
         });
     }, [places, routeAnchor]);
+
+    useEffect(() => {
+        const viewer = viewerRef.current;
+
+        if (!viewer || viewer.isDestroyed()) return;
+
+        let lastCheckedTime = 0;
+
+        const visibilityState = new Map();
+
+        const updatePlaceLabelVisibility = () => {
+            const now = performance.now();
+
+            // 100msに1回程度だけ判定
+            if (now - lastCheckedTime < 100) {
+                return;
+            }
+
+            lastCheckedTime = now;
+
+            entitiesRef.current.forEach((entity) => {
+                if (!entity.place) return;
+                if (!entity.label) return;
+
+                const placeId = entity.place.id;
+
+                const placePosition =
+                    entity.position?.getValue(
+                        viewer.clock.currentTime
+                    );
+
+                if (!placePosition) return;
+
+                const windowPosition =
+                    Cesium.SceneTransforms.worldToWindowCoordinates(
+                        viewer.scene,
+                        placePosition
+                    );
+
+                if (!windowPosition) {
+                    entity.label.show = false;
+                    return;
+                }
+
+                const pickedPosition =
+                    viewer.scene.pickPosition(windowPosition);
+
+                let shouldShow = true;
+
+                if (pickedPosition) {
+                    const cameraPosition =
+                        viewer.camera.positionWC;
+
+                    const distanceToPlace =
+                        Cesium.Cartesian3.distance(
+                            cameraPosition,
+                            placePosition
+                        );
+
+                    const distanceToSurface =
+                        Cesium.Cartesian3.distance(
+                            cameraPosition,
+                            pickedPosition
+                        );
+
+                    const distanceDifference =
+                        distanceToPlace - distanceToSurface;
+
+                    /*
+                     * 建物などの表面が地点より5m以上手前なら、
+                     * 地点は隠れていると判断。
+                     *
+                     * 5m未満の差は誤差として地点を表示する。
+                     */
+                    shouldShow = distanceDifference < 5;
+                }
+
+                const previous =
+                    visibilityState.get(placeId) ?? {
+                        candidate: shouldShow,
+                        count: 0,
+                        visible: true,
+                    };
+
+                if (previous.candidate === shouldShow) {
+                    previous.count += 1;
+                } else {
+                    previous.candidate = shouldShow;
+                    previous.count = 1;
+                }
+
+                // 同じ判定が2回続いたら切り替える
+                if (
+                    previous.count >= 2 &&
+                    previous.visible !== shouldShow
+                ) {
+                    previous.visible = shouldShow;
+                    entity.label.show = shouldShow;
+                }
+
+                visibilityState.set(placeId, previous);
+            });
+        };
+
+        viewer.scene.postRender.addEventListener(
+            updatePlaceLabelVisibility
+        );
+
+        return () => {
+            if (!viewer.isDestroyed()) {
+                viewer.scene.postRender.removeEventListener(
+                    updatePlaceLabelVisibility
+                );
+            }
+
+            visibilityState.clear();
+        };
+    }, []);
 
     useEffect(() => {
         const viewer = viewerRef.current;
