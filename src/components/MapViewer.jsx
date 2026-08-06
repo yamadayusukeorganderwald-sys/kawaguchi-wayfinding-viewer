@@ -79,6 +79,7 @@ function MapViewer({
     onMapClick,
     clickedPosition,
     onEdgeClick,
+    onAreaClick,
     onObjectClick,
     selectedEdge,
     selectedEntity,
@@ -560,6 +561,12 @@ function MapViewer({
             // 🌱 Discoveryをクリック
             if (picked?.id?.discovery) {
                 setSelectedDiscovery(picked.id.discovery);
+                return;
+            }
+
+            // Areaをクリック
+            if (picked?.id?.area) {
+                onAreaClick?.(picked.id.area);
                 return;
             }
 
@@ -1359,7 +1366,10 @@ function MapViewer({
                             : undefined,
 
                     material:
-                        Cesium.Color.GREENYELLOW.withAlpha(0.2),
+                        selectedEntity?.type === "area" &&
+                            selectedEntity.data.id === area.id
+                            ? Cesium.Color.RED.withAlpha(0.6)
+                            : Cesium.Color.RED.withAlpha(0.3),
 
                     outline: false,
                     outlineColor: Cesium.Color.WHITE,
@@ -1370,7 +1380,7 @@ function MapViewer({
             areaEntitiesRef.current.push(entity);
         });
 
-    }, [areas]);
+    }, [areas, selectedEntity]);
 
     useEffect(() => {
         const viewer = viewerRef.current;

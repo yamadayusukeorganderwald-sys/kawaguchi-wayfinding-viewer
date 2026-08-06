@@ -1,3 +1,5 @@
+import EntityPanel from "./EntityPanel";
+
 const PLACE_TYPE_LABELS = {
     station: "駅",
     shop: "店舗",
@@ -10,6 +12,7 @@ const PLACE_TYPE_LABELS = {
 function Sidebar({
     place,
     setPlace,
+    onSelectPlace,
     routeAnchor,
     setRouteAnchor,
     showRoute,
@@ -19,9 +22,8 @@ function Sidebar({
     setEditingPlace,
     onDeletePlace,
 
-    setEditingGeometry,
-    setShowGeometryForm,
-    onDeleteObject,
+    onEditEntity,
+    onDeleteEntity,
 
     selectedEdge,
     selectedEntity,
@@ -84,8 +86,7 @@ function Sidebar({
                                 <button
                                     key={item.id}
                                     onClick={() => {
-                                        setPlace(item);
-                                        setSelectedEdge(null);
+                                        onSelectPlace(item);
                                     }}
                                     style={{
                                         flex: 1,
@@ -170,75 +171,16 @@ function Sidebar({
                     </section>
 
                 </>
-            ) : selectedEntity?.type === "object" ? (
-                <>
-
-                    <h2
-                        style={{
-                            fontSize: "18px",
-                            margin: "14px 0 6px",
-                        }}
-                    >
-                        {selectedEntity.data.name}
-                    </h2>
-
-                    <div
-                        style={{
-                            fontSize: "11px",
-                            color: "#666",
-                            marginBottom: "12px",
-                        }}
-                    >
-                        Object
-                    </div>
-
-                    <div
-                        style={{
-                            display: "flex",
-                            gap: "8px",
-                            marginBottom: "16px",
-                        }}
-                    >
-                        <button
-                            onClick={() => {
-                                setEditingGeometry(selectedEntity.data);
-                                setShowGeometryForm(true);
-                            }}
-                        >
-                            編集
-                        </button>
-
-                        <button
-                            onClick={() =>
-                                onDeleteObject(selectedEntity.data)
-                            }
-                        >
-                            削除
-                        </button>
-                    </div>
-
-                    <section style={{ marginBottom: "12px" }}>
-                        <h3 style={{ fontSize: "12px", margin: "0 0 4px" }}>
-                            種類
-                        </h3>
-
-                        <p style={{ margin: 0, fontSize: "12px" }}>
-                            {selectedEntity.data.object_type}
-                        </p>
-                    </section>
-
-                    <section style={{ marginBottom: "12px" }}>
-                        <h3 style={{ fontSize: "12px", margin: "0 0 4px" }}>
-                            高さ
-                        </h3>
-
-                        <p style={{ margin: 0, fontSize: "12px" }}>
-                            {selectedEntity.data.height} m
-                        </p>
-                    </section>
-
-
-                </>
+            ) : (
+                selectedEntity?.type === "place" ||
+                selectedEntity?.type === "object" ||
+                selectedEntity?.type === "area"
+            ) ? (
+                <EntityPanel
+                    selectedEntity={selectedEntity}
+                    onEditEntity={onEditEntity}
+                    onDeleteEntity={onDeleteEntity}
+                />
             ) : selectedEdge ? (
                 <>
                     <h2

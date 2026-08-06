@@ -358,6 +358,21 @@ function App() {
     setShowRoute(false);
   };
 
+  const handlePlaceSelect = (selectedPlace) => {
+    if (!selectedPlace) return;
+
+    setPlace(selectedPlace);
+
+    setSelectedEntity({
+      type: "place",
+      data: selectedPlace,
+    });
+
+    setSelectedEdge(null);
+    setIsCurrentPositionSelected(false);
+    setClickedPosition(null);
+  };
+
   const handleEdgeClick = (edge) => {
     setSelectedEdge(edge);
 
@@ -375,10 +390,25 @@ function App() {
       type: "object",
       data: object,
     });
+    setShowMobileDetails(true);
+    setSelectedEdge(null);
+    setIsCurrentPositionSelected(false);
+    setClickedPosition(null);
+  };
+
+  const handleAreaClick = (area) => {
+    setSelectedEntity({
+      type: "area",
+      data: area,
+    });
 
     setSelectedEdge(null);
     setIsCurrentPositionSelected(false);
     setClickedPosition(null);
+
+    if (isMobile) {
+      setShowMobileDetails(true);
+    }
   };
 
   const handleStartEdgeSplit = () => {
@@ -440,6 +470,11 @@ function App() {
       place_type: updatedPlace.place_type,
       level: updatedPlace.level,
       description: updatedPlace.description,
+
+      observation: updatedPlace.observation,
+      problem: updatedPlace.problem,
+      proposal: updatedPlace.proposal,
+
       image_url: updatedPlace.image_url,
     };
 
@@ -461,6 +496,11 @@ function App() {
     );
 
     setPlace(data);
+
+    setSelectedEntity({
+      type: "place",
+      data,
+    });
 
     if (routeAnchor?.id === data.id) {
       setRouteAnchor(data);
@@ -787,6 +827,7 @@ function App() {
       ]);
 
     const {
+      id: _id,
       geometryKind,
       geometryType,
       ...commonData
@@ -832,6 +873,7 @@ function App() {
       ]);
 
     const {
+      id: _id,
       geometryKind,
       geometryType,
       extruded_height,
@@ -895,6 +937,7 @@ function App() {
 
   const createSpace = async (geometry) => {
     const {
+      id: _id,
       geometryKind,
       geometryType,
       name,
@@ -926,6 +969,14 @@ function App() {
     ) {
       return handleUpdateObject(geometry);
     }
+
+    if (
+      editingGeometry &&
+      geometry.geometryKind === "area"
+    ) {
+      return handleUpdateArea(geometry);
+    }
+
     if (geometry.geometryKind === "area") {
       return handleSaveArea(geometry);
     }
@@ -1006,6 +1057,67 @@ function App() {
     }
   };
 
+  const handleUpdateArea = async (geometry) => {
+    const {
+      id,
+      geometryKind,
+      geometryType,
+      flatCoordinates,
+      ...commonData
+    } = geometry;
+
+    const updateData = {
+      ...commonData,
+      area_type: geometryType,
+    };
+
+    const { data, error } = await supabase
+      .from("areas")
+      .update(updateData)
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error(
+        "Area更新失敗:",
+        error
+      );
+
+      alert(
+        `Areaを更新できませんでした\n${error.message}`
+      );
+
+      return;
+    }
+
+    const savedArea = {
+      ...data,
+      flatCoordinates:
+        data.coordinates?.flat() ?? [],
+    };
+
+    setAreaList((current) =>
+      current.map((area) =>
+        area.id === savedArea.id
+          ? savedArea
+          : area
+      )
+    );
+
+    setSelectedEntity({
+      type: "area",
+      data: savedArea,
+    });
+
+    resetGeometryEditing();
+
+    console.log(
+      "Area更新完了",
+      savedArea
+    );
+  };
+
   const handleUpdateObject = async (geometry) => {
     const {
       id,
@@ -1058,6 +1170,54 @@ function App() {
     console.log(
       "Object更新完了",
       data
+    );
+  };
+
+  const handleDeleteArea = async (targetArea) => {
+    const confirmed = window.confirm(
+      `「${targetArea.name}」を削除しますか？`
+    );
+
+    if (!confirmed) return;
+
+    const { error } = await supabase
+      .from("areas")
+      .delete()
+      .eq("id", targetArea.id);
+
+    if (error) {
+      console.error(
+        "Area削除失敗:",
+        error
+      );
+
+      alert(
+        `Areaを削除できませんでした\n${error.message}`
+      );
+
+      return;
+    }
+
+    setAreaList((current) =>
+      current.filter(
+        (area) => area.id !== targetArea.id
+      )
+    );
+
+    if (
+      selectedEntity?.type === "area" &&
+      selectedEntity.data.id === targetArea.id
+    ) {
+      setSelectedEntity(null);
+    }
+
+    if (editingGeometry?.id === targetArea.id) {
+      resetGeometryEditing();
+    }
+
+    console.log(
+      "Area削除完了",
+      targetArea
     );
   };
 
@@ -1132,6 +1292,54 @@ function App() {
         `Objectを削除できませんでした\n${error.message}`
       );
     }
+  };
+
+  const handleEditEntity = (entity) => {
+    if (!entity) return;
+
+    if (entity.type === "place") {
+      setEditingPlace(entity.data);
+      setShowPlaceForm(true);
+      return;
+    }
+
+    if (
+      entity.type === "object" ||
+      entity.type === "area"
+    ) {
+      setEditingGeometry(entity.data);
+      setShowGeometryForm(true);
+      return;
+    }
+
+    console.warn(
+      "編集未対応のEntityです:",
+      entity.type
+    );
+  };
+
+  const handleDeleteEntity = (entity) => {
+    if (!entity) return;
+
+    if (entity.type === "place") {
+      handleDeletePlace(entity.data);
+      return;
+    }
+
+    if (entity.type === "object") {
+      handleDeleteObject(entity.data);
+      return;
+    }
+
+    if (entity.type === "area") {
+      handleDeleteArea(entity.data);
+      return;
+    }
+
+    console.warn(
+      "削除未対応のEntityです:",
+      entity.type
+    );
   };
 
   const handleSaveSpace = async (geometry) => {
@@ -1451,9 +1659,9 @@ function App() {
             isMobile={isMobile}
             clickedPosition={clickedPosition}
 
-            setEditingGeometry={setEditingGeometry}
-            setShowGeometryForm={setShowGeometryForm}
-            onDeleteObject={handleDeleteObject}
+            onEditEntity={handleEditEntity}
+            onDeleteEntity={handleDeleteEntity}
+            onSelectPlace={handlePlaceSelect}
 
             selectedEdge={selectedEdge}
             selectedEntity={selectedEntity}
@@ -1482,18 +1690,7 @@ function App() {
         setEditingGeometryVertexIndex={setEditingGeometryVertexIndex}
 
         place={place}
-        setPlace={(selectedPlace) => {
-          setPlace(selectedPlace);
-
-          setSelectedEntity({
-            type: "place",
-            data: selectedPlace,
-          });
-
-          setSelectedEdge(null);
-          setIsCurrentPositionSelected(false);
-          setClickedPosition(null);
-        }}
+        setPlace={handlePlaceSelect}
         showRoute={showRoute}
         setShowRoute={setShowRoute}
         routeAnchor={routeAnchor}
@@ -1501,6 +1698,7 @@ function App() {
         onMapClick={setClickedPosition}
         clickedPosition={clickedPosition}
         onEdgeClick={handleEdgeClick}
+        onAreaClick={handleAreaClick}
         onObjectClick={handleObjectClick}
         selectedEdge={selectedEdge}
         selectedEntity={selectedEntity}
@@ -1553,9 +1751,8 @@ function App() {
           isCurrentPositionSelected={isCurrentPositionSelected}
           currentPosition={currentPosition}
 
-          setEditingGeometry={setEditingGeometry}
-          setShowGeometryForm={setShowGeometryForm}
-          onDeleteObject={handleDeleteObject}
+          onEditEntity={handleEditEntity}
+          onDeleteEntity={handleDeleteEntity}
 
           setShowPlaceForm={setShowPlaceForm}
           setEditingPlace={setEditingPlace}
