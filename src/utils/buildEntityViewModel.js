@@ -13,6 +13,24 @@ const PLACE_ROLE_LABELS = {
     observation: "観察地点",
 };
 
+const MOVEMENT_TYPE_LABELS = {
+    level: "平面移動",
+    stairs: "階段",
+    ramp: "スロープ",
+    escalator: "エスカレーター",
+    elevator: "エレベーター",
+    walk: "徒歩",
+};
+
+const ROAD_CONTEXT_LABELS = {
+    pedestrian_only: "歩行者専用",
+    sidewalk_separated: "歩道分離",
+    white_line: "白線",
+    shared: "共用",
+    roadway: "車道",
+    crossing: "横断歩道",
+};
+
 const AREA_TYPE_LABELS = {
     plaza: "広場",
     passage: "通路",
@@ -81,6 +99,84 @@ const buildPlaceViewModel = (place) => {
             {
                 label: "改善案",
                 value: place.proposal || "未記入",
+            },
+        ],
+    };
+};
+
+const buildEdgeViewModel = (edge, context = {}) => {
+    const places = context.places ?? [];
+
+    const fromPlace = places.find(
+        (place) => place.id === edge.from
+    );
+
+    const toPlace = places.find(
+        (place) => place.id === edge.to
+    );
+
+    return {
+        title:
+            edge.road_name?.trim() ||
+            "名無しの道",
+
+        typeLabel: "歩行経路",
+
+        imageUrl: null,
+
+        fields: [
+            {
+                label: "始点",
+                value:
+                    fromPlace?.name ??
+                    edge.from ??
+                    "未設定",
+            },
+            {
+                label: "終点",
+                value:
+                    toPlace?.name ??
+                    edge.to ??
+                    "未設定",
+            },
+            {
+                label: "距離",
+                value:
+                    edge.distance != null
+                        ? `${edge.distance} m`
+                        : "未設定",
+            },
+            {
+                label: "徒歩時間",
+                value:
+                    edge.walkingTime != null
+                        ? `${edge.walkingTime} 秒`
+                        : "未設定",
+            },
+            {
+                label: "移動方法",
+                value:
+                    MOVEMENT_TYPE_LABELS[
+                    edge.movement_type
+                    ] ??
+                    edge.movement_type ??
+                    "未設定",
+            },
+            {
+                label: "道路空間",
+                value:
+                    ROAD_CONTEXT_LABELS[
+                    edge.road_context
+                    ] ??
+                    edge.road_context ??
+                    "未設定",
+            },
+            {
+                label: "双方向",
+                value:
+                    edge.bidirectional
+                        ? "通行可能"
+                        : "一方向",
             },
         ],
     };
@@ -189,6 +285,12 @@ export const buildEntityViewModel = (
     switch (type) {
         case "place":
             return buildPlaceViewModel(data);
+
+        case "edge":
+            return buildEdgeViewModel(
+                data,
+                context
+            );
 
         case "object":
             return buildObjectViewModel(data);

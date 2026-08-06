@@ -1,5 +1,5 @@
-import { useState } from "react";
 import EntityPanel from "./EntityPanel";
+import { buildEntityViewModel } from "../utils/buildEntityViewModel";
 
 import {
   FiEdit2,
@@ -10,16 +10,12 @@ import {
 
 function MobileBottomBar({
   place,
-  selectedEdge,
+  places,
   selectedEntity,
 
   onEditEntity,
   onDeleteEntity,
-  setShowPlaceForm,
-  setEditingPlace,
-  onDeletePlace,
-  onEditEdge,
-  onDeleteEdge,
+
   showDetails,
   setShowDetails,
   isCurrentPositionSelected,
@@ -29,7 +25,6 @@ function MobileBottomBar({
 
   if (
     !place &&
-    !selectedEdge &&
     !selectedEntity &&
     !isCurrentPositionSelected &&
     !clickedPosition
@@ -37,76 +32,37 @@ function MobileBottomBar({
     return null;
   }
 
-  const selectedPlace =
-    selectedEntity?.type === "place"
-      ? selectedEntity.data
-      : null;
-
-  const selectedObject =
-    selectedEntity?.type === "object"
-      ? selectedEntity.data
-      : null;
-
-  const selectedArea =
-    selectedEntity?.type === "area"
-      ? selectedEntity.data
-      : null;
+  const viewModel = buildEntityViewModel(
+    selectedEntity,
+    {
+      places,
+    }
+  );
 
   const handleEdit = () => {
-    if (
-      selectedObject ||
-      selectedArea ||
-      selectedPlace
-    ) {
+    if (selectedEntity) {
       onEditEntity(selectedEntity);
       return;
     }
-
-    if (selectedEdge) {
-      onEditEdge(selectedEdge);
-      return;
-    }
-
-    setEditingPlace(place);
-    setShowPlaceForm(true);
   };
 
   const handleDelete = () => {
-    if (
-      selectedObject ||
-      selectedArea ||
-      selectedPlace
-    ) {
+    if (selectedEntity) {
       onDeleteEntity(selectedEntity);
       return;
     }
-
-    if (selectedEdge) {
-      onDeleteEdge(selectedEdge);
-      return;
-    }
-
-    onDeletePlace(place);
   };
 
   const isUnregisteredPosition =
     Boolean(clickedPosition) &&
     !isCurrentPositionSelected &&
-    !selectedEdge;
+    !selectedEntity;
 
   const displayName = isCurrentPositionSelected
     ? "現在地"
-    : selectedObject
-      ? selectedObject.name || "名称未設定Object"
-      : selectedArea
-        ? selectedArea.name || "名称未設定Area"
-        : selectedPlace
-          ? selectedPlace.name || "名称未設定地点"
-          : selectedEdge
-            ? selectedEdge.road_name?.trim() || "名無しの道"
-            : isUnregisteredPosition
-              ? "未登録地点"
-              : place?.name ?? "地点未選択";
+    : isUnregisteredPosition
+      ? "未登録地点"
+      : viewModel?.title ?? "地点未選択";
 
   const displayDescription = isCurrentPositionSelected
     ? "今いるところ"
@@ -303,92 +259,19 @@ function MobileBottomBar({
               未登録
             </div>
           </div>
-        ) : selectedObject || selectedArea || selectedPlace ? (
+        ) : selectedEntity ? (
           <EntityPanel
             selectedEntity={selectedEntity}
             onEditEntity={onEditEntity}
             onDeleteEntity={onDeleteEntity}
+            context={{
+              places,
+            }}
             compact
             showActions={false}
           />
-        ) : selectedEdge ? (
-          <div style={{ fontSize: "13px", lineHeight: 1.6 }}>
-            <div>
-              <strong>距離：</strong>
-              {selectedEdge.distance} m
-            </div>
-
-            <div>
-              <strong>徒歩時間：</strong>
-              {selectedEdge.walkingTime} 秒
-            </div>
-
-            <div>
-              <strong>移動方法：</strong>
-              {selectedEdge.movement_type || "未設定"}
-            </div>
-
-            <div>
-              <strong>道路空間との関係：</strong>
-              {selectedEdge.road_context || "未設定"}
-            </div>
-          </div>
         ) : (
-          <div>
-            {place.image && (
-              <img
-                src={place.image}
-                alt={place.name}
-                style={{
-                  width: "100%",
-                  maxHeight: "180px",
-                  objectFit: "cover",
-                  borderRadius: "8px",
-                  marginBottom: "12px",
-                  display: "block",
-                }}
-              />
-            )}
-
-            <section style={{ marginBottom: "12px" }}>
-              <strong style={{ fontSize: "13px" }}>観察</strong>
-              <p
-                style={{
-                  margin: "4px 0 0",
-                  fontSize: "12px",
-                  lineHeight: 1.6,
-                }}
-              >
-                {place.observation || "未記入"}
-              </p>
-            </section>
-
-            <section style={{ marginBottom: "12px" }}>
-              <strong style={{ fontSize: "13px" }}>課題</strong>
-              <p
-                style={{
-                  margin: "4px 0 0",
-                  fontSize: "12px",
-                  lineHeight: 1.6,
-                }}
-              >
-                {place.problem || "未記入"}
-              </p>
-            </section>
-
-            <section>
-              <strong style={{ fontSize: "13px" }}>改善案</strong>
-              <p
-                style={{
-                  margin: "4px 0 0",
-                  fontSize: "12px",
-                  lineHeight: 1.6,
-                }}
-              >
-                {place.proposal || "未記入"}
-              </p>
-            </section>
-          </div>
+          <div>地点未選択</div>
         )}
       </div>
     </div>

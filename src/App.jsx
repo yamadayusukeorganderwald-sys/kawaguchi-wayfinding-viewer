@@ -1303,6 +1303,13 @@ function App() {
       return;
     }
 
+    if (entity.type === "edge") {
+      setEditingEdge(entity.data);
+      setInitialEdge(null);
+      setShowEdgeForm(true);
+      return;
+    }
+
     if (
       entity.type === "object" ||
       entity.type === "area"
@@ -1323,6 +1330,11 @@ function App() {
 
     if (entity.type === "place") {
       handleDeletePlace(entity.data);
+      return;
+    }
+
+    if (entity.type === "edge") {
+      handleDeleteEdge(entity.data);
       return;
     }
 
@@ -1647,33 +1659,19 @@ function App() {
         >
           <Sidebar
             place={place}
-            setPlace={setPlace}
-            routeAnchor={routeAnchor}
-            setRouteAnchor={setRouteAnchor}
-            showRoute={showRoute}
-            setShowRoute={setShowRoute}
+            onSelectPlace={handlePlaceSelect}
             places={placeList}
-            setShowPlaceForm={setShowPlaceForm}
-            setEditingPlace={setEditingPlace}
-            onDeletePlace={handleDeletePlace}
-            isMobile={isMobile}
-            clickedPosition={clickedPosition}
 
             onEditEntity={handleEditEntity}
             onDeleteEntity={handleDeleteEntity}
-            onSelectPlace={handlePlaceSelect}
 
-            selectedEdge={selectedEdge}
             selectedEntity={selectedEntity}
-            setSelectedEdge={setSelectedEdge}
-            onEditEdge={(edge) => {
-              setEditingEdge(edge);
-              setInitialEdge(null);
-              setShowEdgeForm(true);
-            }}
-            onDeleteEdge={handleDeleteEdge}
+
             isCurrentPositionSelected={isCurrentPositionSelected}
             currentPosition={currentPosition}
+            clickedPosition={clickedPosition}
+
+            isMobile={isMobile}
           />
         </div>
       )}
@@ -1745,25 +1743,13 @@ function App() {
       {isMobile && (
         <MobileBottomBar
           place={place}
-          selectedEdge={selectedEdge}
+          places={placeList}
           selectedEntity={selectedEntity}
-
           isCurrentPositionSelected={isCurrentPositionSelected}
           currentPosition={currentPosition}
-
           onEditEntity={handleEditEntity}
           onDeleteEntity={handleDeleteEntity}
-
-          setShowPlaceForm={setShowPlaceForm}
-          setEditingPlace={setEditingPlace}
-          onDeletePlace={handleDeletePlace}
           clickedPosition={clickedPosition}
-          onEditEdge={(edge) => {
-            setEditingEdge(edge);
-            setInitialEdge(null);
-            setShowEdgeForm(true);
-          }}
-          onDeleteEdge={handleDeleteEdge}
           showDetails={showMobileDetails}
           setShowDetails={setShowMobileDetails}
         />
