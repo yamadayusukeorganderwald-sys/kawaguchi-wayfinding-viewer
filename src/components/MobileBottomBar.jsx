@@ -1,4 +1,11 @@
+import {
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+
 import EntityPanel from "./EntityPanel";
+import NearbyDiscoveryPopover from "./NearbyDiscoveryPopover";
 import { buildEntityViewModel } from "../utils/buildEntityViewModel";
 
 import {
@@ -15,6 +22,9 @@ function MobileBottomBar({
 
   onEditEntity,
   onDeleteEntity,
+  onSelectDiscovery,
+
+  discoveries,
 
   showDetails,
   setShowDetails,
@@ -36,8 +46,31 @@ function MobileBottomBar({
     selectedEntity,
     {
       places,
+      discoveries,
     }
   );
+
+  const [showDiscoveries, setShowDiscoveries] =
+    useState(false);
+
+  const discoveryButtonRef = useRef(null);
+
+  const [discoveryAnchorRect, setDiscoveryAnchorRect] =
+    useState(null);
+
+  const nearbyDiscoveries =
+    viewModel?.nearbyDiscoveries ?? [];
+
+  const hasNearbyDiscoveries =
+    nearbyDiscoveries.length > 0;
+
+  useEffect(() => {
+    setShowDiscoveries(false);
+    setDiscoveryAnchorRect(null);
+  }, [
+    selectedEntity?.type,
+    selectedEntity?.data?.id,
+  ]);
 
   const handleEdit = () => {
     if (selectedEntity) {
@@ -106,6 +139,23 @@ function MobileBottomBar({
         gap: "6px",
       }}
     >
+      {showDiscoveries &&
+        hasNearbyDiscoveries && (
+          <NearbyDiscoveryPopover
+            discoveries={nearbyDiscoveries}
+            anchorRect={discoveryAnchorRect}
+            onClose={() => {
+              setShowDiscoveries(false);
+              setDiscoveryAnchorRect(null);
+            }}
+            onSelectDiscovery={(discovery) => {
+              setShowDiscoveries(false);
+              setDiscoveryAnchorRect(null);
+              onSelectDiscovery?.(discovery);
+            }}
+            compact
+          />
+        )}
       <div
         style={{
           display: "flex",
@@ -192,6 +242,47 @@ function MobileBottomBar({
               </>
             )}
           </button>
+          {hasNearbyDiscoveries && (
+            <button
+              ref={discoveryButtonRef}
+              type="button"
+              onClick={() => {
+                const nextOpen = !showDiscoveries;
+
+                if (
+                  nextOpen &&
+                  discoveryButtonRef.current
+                ) {
+                  setDiscoveryAnchorRect(
+                    discoveryButtonRef.current.getBoundingClientRect()
+                  );
+                }
+
+                setShowDiscoveries(nextOpen);
+              }}
+              style={{
+                ...actionButtonStyle,
+                padding: "5px 9px",
+                borderRadius: "8px",
+                background: "#4fbd45",
+                color: "#fff",
+                fontWeight: 700,
+              }}
+            >
+              <img
+                src="/icons/discovery_message_sprout_icon.svg"
+                alt=""
+                aria-hidden="true"
+                style={{
+                  width: "17px",
+                  height: "17px",
+                  display: "block",
+                }}
+              />
+
+              発見({nearbyDiscoveries.length})
+            </button>
+          )}
         </div>
       )}
 
@@ -266,6 +357,7 @@ function MobileBottomBar({
             onDeleteEntity={onDeleteEntity}
             context={{
               places,
+              discoveries,
             }}
             compact
             showActions={false}

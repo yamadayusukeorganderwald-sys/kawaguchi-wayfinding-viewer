@@ -2345,7 +2345,7 @@ function MapViewer({
                 style={{
                     position: "absolute",
                     right: "16px",
-                    bottom: isMobile ? "64px" : "24px",
+                    bottom: isMobile ? "100px" : "24px",
                     width: "64px",
                     height: "64px",
                     padding: 0,

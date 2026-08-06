@@ -1,3 +1,6 @@
+import { findNearbyDiscoveries } from "./findNearbyDiscoveries";
+import { getEntityRepresentativePosition } from "./getEntityRepresentativePosition";
+
 const PLACE_TYPE_LABELS = {
     station: "駅",
     shop: "店舗",
@@ -282,21 +285,42 @@ export const buildEntityViewModel = (
 
     const { type, data } = selectedEntity;
 
+    const representativePosition =
+        getEntityRepresentativePosition(
+            selectedEntity,
+            context
+        );
+
+    const nearbyDiscoveries =
+        representativePosition
+            ? findNearbyDiscoveries(
+                representativePosition.latitude,
+                representativePosition.longitude,
+                context.discoveries ?? []
+            )
+            : [];
+
+    let viewModel;
+
     switch (type) {
         case "place":
-            return buildPlaceViewModel(data);
+            viewModel = buildPlaceViewModel(data);
+            break;
 
         case "edge":
-            return buildEdgeViewModel(
+            viewModel = buildEdgeViewModel(
                 data,
                 context
             );
+            break;
 
         case "object":
-            return buildObjectViewModel(data);
+            viewModel = buildObjectViewModel(data);
+            break;
 
         case "area":
-            return buildAreaViewModel(data);
+            viewModel = buildAreaViewModel(data);
+            break;
 
         default:
             console.warn(
@@ -307,4 +331,8 @@ export const buildEntityViewModel = (
 
             return null;
     }
+    return {
+        ...viewModel,
+        nearbyDiscoveries,
+    };
 };

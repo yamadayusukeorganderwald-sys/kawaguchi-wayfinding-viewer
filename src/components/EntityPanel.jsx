@@ -1,8 +1,14 @@
 import {
+    useEffect,
+    useRef,
+    useState,
+} from "react";
+import NearbyDiscoveryPopover from "./NearbyDiscoveryPopover";
+
+import {
     FiEdit2,
     FiTrash2,
 } from "react-icons/fi";
-
 import { buildEntityViewModel } from "../utils/buildEntityViewModel";
 
 const DetailRow = ({
@@ -94,6 +100,7 @@ function EntityPanel({
     selectedEntity,
     onEditEntity,
     onDeleteEntity,
+    onSelectDiscovery,
     compact = false,
     showActions = true,
     context = {},
@@ -106,6 +113,27 @@ function EntityPanel({
     if (!viewModel) {
         return null;
     }
+
+    const [showDiscoveries, setShowDiscoveries] =
+        useState(false);
+
+    const discoveryButtonRef = useRef(null);
+
+    const [discoveryAnchorRect, setDiscoveryAnchorRect] =
+        useState(null);
+
+    const nearbyDiscoveries =
+        viewModel?.nearbyDiscoveries ?? [];
+
+    const hasNearbyDiscoveries =
+        nearbyDiscoveries.length > 0;
+
+    useEffect(() => {
+        setShowDiscoveries(false);
+    }, [
+        selectedEntity?.type,
+        selectedEntity?.data?.id,
+    ]);
 
     const actionButtonStyle = {
         border: "none",
@@ -157,36 +185,99 @@ function EntityPanel({
             {showActions && (
                 <div
                     style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "16px",
+                        position: "relative",
                         marginBottom: "16px",
                     }}
                 >
-                    <button
-                        type="button"
-                        onClick={() =>
-                            onEditEntity(selectedEntity)
-                        }
-                        style={actionButtonStyle}
-                    >
-                        <FiEdit2 size={14} />
-                        編集
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={() =>
-                            onDeleteEntity(selectedEntity)
-                        }
+                    <div
                         style={{
-                            ...actionButtonStyle,
-                            color: "#c62828",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "16px",
                         }}
                     >
-                        <FiTrash2 size={14} />
-                        削除
-                    </button>
+                        <button
+                            type="button"
+                            onClick={() =>
+                                onEditEntity(selectedEntity)
+                            }
+                            style={actionButtonStyle}
+                        >
+                            <FiEdit2 size={14} />
+                            編集
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() =>
+                                onDeleteEntity(selectedEntity)
+                            }
+                            style={{
+                                ...actionButtonStyle,
+                                color: "#c62828",
+                            }}
+                        >
+                            <FiTrash2 size={14} />
+                            削除
+                        </button>
+
+                        {hasNearbyDiscoveries && (
+                            <button
+                                ref={discoveryButtonRef}
+                                type="button"
+                                onClick={() => {
+                                    const nextOpen = !showDiscoveries;
+
+                                    if (
+                                        nextOpen &&
+                                        discoveryButtonRef.current
+                                    ) {
+                                        setDiscoveryAnchorRect(
+                                            discoveryButtonRef.current.getBoundingClientRect()
+                                        );
+                                    }
+
+                                    setShowDiscoveries(nextOpen);
+                                }}
+                                style={{
+                                    ...actionButtonStyle,
+                                    padding: "5px 10px",
+                                    borderRadius: "8px",
+                                    background: "#4fbd45",
+                                    color: "#fff",
+                                    fontWeight: 700,
+                                }}
+                            >
+                                <img
+                                    src="/icons/discovery_message_sprout_icon.svg"
+                                    alt=""
+                                    aria-hidden="true"
+                                    style={{
+                                        width: "17px",
+                                        height: "17px",
+                                    }}
+                                />
+
+                                発見({nearbyDiscoveries.length})
+                            </button>
+                        )}
+                    </div>
+
+                    {showDiscoveries && (
+                        <NearbyDiscoveryPopover
+                            discoveries={nearbyDiscoveries}
+                            anchorRect={discoveryAnchorRect}
+                            onClose={() =>
+                                setShowDiscoveries(false)
+                            }
+                            onSelectDiscovery={(discovery) => {
+                                setShowDiscoveries(false);
+                                setDiscoveryAnchorRect(null);
+                                onSelectDiscovery?.(discovery);
+                            }}
+                            compact={compact}
+                        />
+                    )}
                 </div>
             )}
 

@@ -7,6 +7,9 @@ function Sidebar({
     onEditEntity,
     onDeleteEntity,
     selectedEntity,
+    onSelectDiscovery,
+
+    discoveries,
 
     isCurrentPositionSelected,
     currentPosition,
@@ -158,8 +161,10 @@ function Sidebar({
                     selectedEntity={selectedEntity}
                     onEditEntity={onEditEntity}
                     onDeleteEntity={onDeleteEntity}
+                    onSelectDiscovery={onSelectDiscovery}
                     context={{
                         places,
+                        discoveries,
                     }}
                 />
             ) : clickedPosition ? (

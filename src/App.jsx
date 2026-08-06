@@ -1664,6 +1664,8 @@ function App() {
 
             onEditEntity={handleEditEntity}
             onDeleteEntity={handleDeleteEntity}
+            onSelectDiscovery={setSelectedDiscovery}
+            discoveries={discoveryList}
 
             selectedEntity={selectedEntity}
 
@@ -1745,6 +1747,7 @@ function App() {
           place={place}
           places={placeList}
           selectedEntity={selectedEntity}
+          discoveries={discoveryList}
           isCurrentPositionSelected={isCurrentPositionSelected}
           currentPosition={currentPosition}
           onEditEntity={handleEditEntity}
@@ -1752,6 +1755,7 @@ function App() {
           clickedPosition={clickedPosition}
           showDetails={showMobileDetails}
           setShowDetails={setShowMobileDetails}
+          onSelectDiscovery={setSelectedDiscovery}
         />
       )}
 
