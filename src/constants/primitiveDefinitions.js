@@ -8,9 +8,9 @@ export const PRIMITIVE_DEFINITIONS = {
 
   cylinder: {
     label: "円柱",
-    drawingMethod: "center-radius",
+    drawingMethod: "center-radius-height",
     settingsComponent: null,
-    enabled: false,
+    enabled: true,
   },
 
   extruded_polygon: {

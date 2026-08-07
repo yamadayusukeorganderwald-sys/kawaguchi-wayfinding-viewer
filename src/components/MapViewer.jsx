@@ -1,8 +1,9 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as Cesium from "cesium";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 import { findShortestRoute } from "../utils/routeSearch";
 import { getClosestPointOnSegment } from "../utils/geometry";
+import { useGeometryDrawing } from "../hooks/useGeometryDrawing";
 import { InteractionMode } from "../constants/interactionMode";
 
 const LEVEL_HEIGHTS = {
@@ -63,6 +64,10 @@ function MapViewer({
 
     drawingGeometryPoints,
     setDrawingGeometryPoints,
+    drawingGeometryState,
+    setDrawingGeometryState,
+    onGeometryDrawingComplete,
+    drawingMethod,
     editingGeometryVertexIndex,
     setEditingGeometryVertexIndex,
 
@@ -105,6 +110,7 @@ function MapViewer({
 }) {
     const cesiumContainer = useRef(null);
     const viewerRef = useRef(null);
+    const [viewerReady, setViewerReady] = useState(false);
     const currentPositionEntityRef = useRef(null);
     const gpsWatchIdRef = useRef(null);
     const onCurrentPositionClickRef =
@@ -116,7 +122,6 @@ function MapViewer({
     const routeEntitiesRef = useRef([]);
     const areaEntitiesRef = useRef([]);
     const objectEntitiesRef = useRef([]);
-    const drawingGeometryEntitiesRef = useRef([]);
     const clickedMarkerRef = useRef(null);
     const currentPlaceRef = useRef(place);
 
@@ -137,6 +142,19 @@ function MapViewer({
     const splitPreviewPositionRef = useRef(null);
     const interactionModeRef = useRef(interactionMode);
     const editingGeometryVertexIndexRef = useRef(null);
+    console.log('[cylinder] MapViewer props drawingMethod', drawingMethod);
+
+    const { handleLeftClick, handleLeftDown, handleMouseMove, handleLeftUp, clearDrawingGeometryEntities } = useGeometryDrawing({
+        viewerRef,
+        viewerReady,
+        interactionMode,
+        drawingMethod,
+        drawingGeometryPoints,
+        setDrawingGeometryPoints,
+        drawingGeometryState,
+        setDrawingGeometryState,
+        onGeometryDrawingComplete,
+    });
     const splitTargetEdgeRef = useRef(splitTargetEdge);
     const placesRef = useRef(places);
     const splitEdgePreviewRefs = useRef([]);
@@ -226,6 +244,41 @@ function MapViewer({
         }
     };
 
+    // Keep refs for drawingMethod and handler functions so the Cesium ScreenSpaceEventHandler
+    // (created once) can read latest values without re-registering handlers.
+    const drawingMethodRef = useRef(drawingMethod);
+    useEffect(() => {
+        drawingMethodRef.current = drawingMethod;
+    }, [drawingMethod]);
+
+    // Keep a ref for drawingGeometryState so event handlers registered once can
+    // read its latest phase/state without re-registering the ScreenSpaceEventHandler.
+    const drawingGeometryStateRef = useRef(drawingGeometryState);
+    useEffect(() => {
+        drawingGeometryStateRef.current = drawingGeometryState;
+    }, [drawingGeometryState]);
+
+    // handlers refs
+    const handleLeftDownRef = useRef();
+    const handleMouseMoveRef = useRef();
+    const handleLeftUpRef = useRef();
+    const handleLeftClickRef = useRef();
+
+    // assign immediately so the ScreenSpaceEventHandler (registered below) can
+    // call the latest handlers even on the first render where handlers are available.
+    handleLeftDownRef.current = handleLeftDown;
+    handleMouseMoveRef.current = handleMouseMove;
+    handleLeftUpRef.current = handleLeftUp;
+    handleLeftClickRef.current = handleLeftClick;
+
+    // keep refs updated when handlers change
+    useEffect(() => {
+        handleLeftDownRef.current = handleLeftDown;
+        handleMouseMoveRef.current = handleMouseMove;
+        handleLeftUpRef.current = handleLeftUp;
+        handleLeftClickRef.current = handleLeftClick;
+    }, [handleLeftDown, handleMouseMove, handleLeftUp, handleLeftClick]);
+
     useEffect(() => {
         const viewer = new Cesium.Viewer(cesiumContainer.current, {
             animation: false,
@@ -293,7 +346,13 @@ function MapViewer({
             viewer.scene.canvas
         );
 
+        setViewerReady(true);
+
         handler.setInputAction((movement) => {
+            console.log("[cylinder] RAW LEFT_CLICK", {
+                interactionMode: interactionModeRef.current,
+                suppressPlaceClick: suppressNextPlaceClickRef.current,
+            });
             const picked = viewer.scene.pick(movement.position);
 
             const pickedEntityId = picked?.id?.id;
@@ -323,6 +382,21 @@ function MapViewer({
                 }, 500);
 
                 return;
+            }
+
+            if (
+                interactionModeRef.current === InteractionMode.GEOMETRY_DRAWING
+            ) {
+                try {
+                    const handled =
+                        handleLeftDownRef.current?.(movement);
+
+                    if (handled) {
+                        return;
+                    }
+                } catch (e) {
+                    console.error("Geometry LEFT_DOWN error", e);
+                }
             }
 
             if (!picked?.id?.place) {
@@ -394,7 +468,7 @@ function MapViewer({
             }, 650);
         }, Cesium.ScreenSpaceEventType.LEFT_DOWN);
 
-        handler.setInputAction(() => {
+        handler.setInputAction((movement) => {
             cancelPlaceLongPress();
 
             if (
@@ -443,6 +517,22 @@ function MapViewer({
                 console.log("地点ドラッグ終了");
             }
 
+            if (
+                interactionModeRef.current ===
+                InteractionMode.GEOMETRY_DRAWING
+            ) {
+                try {
+                    const handled =
+                        handleLeftUpRef.current?.(movement);
+
+                    if (handled) {
+                        return;
+                    }
+                } catch (e) {
+                    console.error("Geometry LEFT_UP error", e);
+                }
+            }
+
             pressedPlaceRef.current = null;
             placePressStartPositionRef.current = null;
             placeLongPressActivatedRef.current = false;
@@ -458,35 +548,22 @@ function MapViewer({
                 interactionModeRef.current ===
                 InteractionMode.GEOMETRY_DRAWING
             ) {
-                let cartesian =
-                    viewer.scene.pickPosition(click.position);
+                try {
+                    console.log(
+                        "[cylinder] MapViewer LEFT_CLICK forwarding"
+                    );
+                    const handled =
+                        handleLeftClickRef.current?.(click);
 
-                if (!cartesian) {
-                    cartesian =
-                        viewer.camera.pickEllipsoid(
-                            click.position,
-                            viewer.scene.globe.ellipsoid
-                        );
+                    if (handled) {
+                        return;
+                    }
+                } catch (e) {
+                    console.error(
+                        "Geometry LEFT_CLICK error",
+                        e
+                    );
                 }
-
-                if (!cartesian) return;
-
-                const cartographic =
-                    Cesium.Cartographic.fromCartesian(cartesian);
-
-                setDrawingGeometryPoints((current) => [
-                    ...current,
-                    {
-                        longitude: Cesium.Math.toDegrees(
-                            cartographic.longitude
-                        ),
-                        latitude: Cesium.Math.toDegrees(
-                            cartographic.latitude
-                        ),
-                    },
-                ]);
-
-                return;
             }
 
             // エッジ上の分割位置を確定
@@ -655,6 +732,24 @@ function MapViewer({
         );
 
         handler.setInputAction((movement) => {
+            if (
+                interactionModeRef.current ===
+                InteractionMode.GEOMETRY_DRAWING
+            ) {
+                try {
+                    const handled =
+                        handleMouseMoveRef.current?.(movement);
+
+                    if (handled) {
+                        return;
+                    }
+                } catch (e) {
+                    console.error(
+                        "Geometry MOUSE_MOVE error",
+                        e
+                    );
+                }
+            }
             const mode = interactionModeRef.current;
 
             // 長押し成立前に指・マウスが動いたら、
@@ -948,7 +1043,6 @@ function MapViewer({
             discoveryEntitiesRef.current = [];
             areaEntitiesRef.current = [];
             objectEntitiesRef.current = [];
-            drawingGeometryEntitiesRef.current = [];
         };
 
     }, []);
@@ -1530,6 +1624,55 @@ function MapViewer({
         console.log("objects", objects);
 
         objects.forEach((object) => {
+            if (object.primitive_type === "cylinder") {
+                const center = object.primitive_data?.center;
+                const radius = Number(object.primitive_data?.radius) || 0;
+                const baseHeight = Number(object.base_height) || 0;
+                const height = Number(object.height) || 0;
+
+                if (
+                    !center ||
+                    typeof center.longitude !== "number" ||
+                    typeof center.latitude !== "number" ||
+                    radius <= 0 ||
+                    height <= 0
+                ) {
+                    console.warn(
+                        "Cylinderのデータが不正です:",
+                        object
+                    );
+                    return;
+                }
+
+                const entity = viewer.entities.add({
+                    name: object.name,
+
+                    position: Cesium.Cartesian3.fromDegrees(
+                        center.longitude,
+                        center.latitude,
+                        baseHeight + height / 2
+                    ),
+
+                    cylinder: {
+                        length: height,
+                        topRadius: radius,
+                        bottomRadius: radius,
+
+                        material:
+                            Cesium.Color.LIGHTGRAY.withAlpha(1),
+
+                        outline: true,
+                        outlineColor:
+                            Cesium.Color.DARKGRAY,
+                    },
+                });
+
+                entity.object = object;
+
+                objectEntitiesRef.current.push(entity);
+
+                return;
+            }
             if (
                 !Array.isArray(object.coordinates) ||
                 object.coordinates.length < 3
@@ -1602,113 +1745,6 @@ function MapViewer({
         });
     }, [selectedEntity]);
 
-    useEffect(() => {
-        const viewer = viewerRef.current;
-
-        if (!viewer || viewer.isDestroyed()) return;
-
-        drawingGeometryEntitiesRef.current.forEach((entity) => {
-            viewer.entities.remove(entity);
-        });
-
-        drawingGeometryEntitiesRef.current = [];
-
-        const isAreaMode =
-            interactionMode === InteractionMode.GEOMETRY_DRAWING ||
-            interactionMode === InteractionMode.GEOMETRY_EDITING ||
-            interactionMode === InteractionMode.GEOMETRY_VERTEX_DRAGGING;
-
-        if (!isAreaMode || drawingGeometryPoints.length === 0) {
-            return;
-        }
-
-        drawingGeometryPoints.forEach((point, index) => {
-            const pointEntity = viewer.entities.add({
-                id: `geometry-vertex-${index}`,
-
-                position: Cesium.Cartesian3.fromDegrees(
-                    point.longitude,
-                    point.latitude,
-                    1
-                ),
-
-                point: {
-                    pixelSize: 8,
-                    color: Cesium.Color.YELLOW,
-                    outlineColor: Cesium.Color.BLACK,
-                    outlineWidth: 1,
-                    disableDepthTestDistance:
-                        Number.POSITIVE_INFINITY,
-                },
-            });
-
-            drawingGeometryEntitiesRef.current.push(pointEntity);
-        });
-
-        if (drawingGeometryPoints.length >= 2) {
-            const linePoints =
-                (
-                    interactionMode === InteractionMode.GEOMETRY_EDITING ||
-                    interactionMode === InteractionMode.GEOMETRY_VERTEX_DRAGGING
-                ) &&
-                    drawingGeometryPoints.length >= 3
-                    ? [
-                        ...drawingGeometryPoints,
-                        drawingGeometryPoints[0],
-                    ]
-                    : drawingGeometryPoints;
-
-            const linePositions = linePoints.map((point) =>
-                Cesium.Cartesian3.fromDegrees(
-                    point.longitude,
-                    point.latitude,
-                    1
-                )
-            );
-
-            const lineEntity = viewer.entities.add({
-                polyline: {
-                    positions: linePositions,
-                    width: 2,
-                    material: Cesium.Color.YELLOW,
-                    clampToGround: false,
-                },
-            });
-
-            drawingGeometryEntitiesRef.current.push(lineEntity);
-        }
-
-        if (drawingGeometryPoints.length >= 3) {
-            const flatCoordinates = drawingGeometryPoints.flatMap(
-                (point) => [
-                    point.longitude,
-                    point.latitude,
-                ]
-            );
-
-            const polygonEntity = viewer.entities.add({
-                polygon: {
-                    hierarchy:
-                        Cesium.Cartesian3.fromDegreesArray(
-                            flatCoordinates
-                        ),
-
-                    height: 0.5,
-
-                    material:
-                        Cesium.Color.YELLOW.withAlpha(0.35),
-
-                    outline: true,
-                    outlineColor: Cesium.Color.YELLOW,
-                },
-            });
-
-            drawingGeometryEntitiesRef.current.push(polygonEntity);
-        }
-    }, [
-        drawingGeometryPoints,
-        interactionMode,
-    ]);
 
     const isPlacingSplit =
         interactionMode === InteractionMode.EDGE_SPLIT_PLACING;

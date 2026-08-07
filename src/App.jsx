@@ -125,7 +125,29 @@ function App() {
       ? PRIMITIVE_DEFINITIONS[selectedPrimitiveType]
       : null;
   const selectedDrawingMethod =
-    selectedPrimitiveDefinition?.drawingMethod ?? null;
+    selectedPrimitiveDefinition?.drawingMethod ??
+    (
+      geometryCreateKind === "area" ||
+        geometryCreateKind === "space"
+        ? "polygon"
+        : null
+    );
+
+  const [drawingGeometryState, setDrawingGeometryState] =
+    useState(null);
+
+  // logs to help trace cylinder drawing flow
+  useEffect(() => {
+    if (selectedPrimitiveType === "cylinder" || selectedDrawingMethod === "center-radius-height") {
+      console.log('[cylinder] drawingMethod', { selectedPrimitiveType, selectedDrawingMethod });
+    }
+  }, [selectedPrimitiveType, selectedDrawingMethod]);
+
+  useEffect(() => {
+    if (drawingGeometryState) {
+      console.log('[cylinder] drawingGeometryState', drawingGeometryState);
+    }
+  }, [drawingGeometryState]);
 
   const [interactionMode, setInteractionMode] =
     useState(InteractionMode.IDLE);
@@ -798,6 +820,7 @@ function App() {
 
   const startGeometryDrawing = () => {
     setDrawingGeometryPoints([]);
+    setDrawingGeometryState(null);
     setEditingGeometry(null);
     setInteractionMode(
       InteractionMode.GEOMETRY_DRAWING
@@ -813,6 +836,7 @@ function App() {
     setGeometryCreateKind(null);
     setGeometryCreateObjectMethod(null);
     setSelectedPrimitiveType(null);
+    setDrawingGeometryState(null);
     setShowGeometryCreateMenu(true);
   };
 
@@ -853,7 +877,11 @@ function App() {
     setGeometryCreateObjectMethod("primitive");
     setSelectedPrimitiveType(primitiveType);
     setShowGeometryCreateMenu(false);
-    startGeometryDrawing();
+    // Defer starting geometry drawing to ensure selectedPrimitiveType state
+    // is applied and selectedDrawingMethod is derived before interactionMode changes.
+    // This prevents MapViewer from receiving a null drawingMethod when the
+    // interactionMode update happens earlier in the same event loop.
+    setTimeout(() => startGeometryDrawing(), 0);
   };
 
   const handleCloseGeometryCreateMenu = () => {
@@ -887,6 +915,7 @@ function App() {
     setShowGeometryForm(false);
     setEditingGeometry(null);
     setDrawingGeometryPoints([]);
+    setDrawingGeometryState(null);
     setEditingGeometryVertexIndex(null);
     setGeometryCreateKind(null);
     setGeometryCreateObjectMethod(null);
@@ -957,8 +986,9 @@ function App() {
       geometryType,
       extruded_height,
       objectMethod: _objectMethod,
-      primitiveType: _primitiveType,
-      drawingMethod: _drawingMethod,
+      primitiveType,
+      drawingMethod,
+      primitiveData,
       ...commonData
     } = geometry;
 
@@ -969,6 +999,10 @@ function App() {
         object_type: geometryType,
         coordinates,
         height: extruded_height,
+
+        primitive_type: primitiveType,
+        drawing_method: drawingMethod,
+        primitive_data: primitiveData,
 
         space_id:
           options.spaceId ?? null,
@@ -1045,6 +1079,7 @@ function App() {
   };
 
   const handleSaveGeometry = async (geometry) => {
+    console.log(geometry);
     if (
       editingGeometry &&
       geometry.geometryKind === "object"
@@ -1771,6 +1806,9 @@ function App() {
 
         drawingGeometryPoints={drawingGeometryPoints}
         setDrawingGeometryPoints={setDrawingGeometryPoints}
+        drawingGeometryState={drawingGeometryState}
+        setDrawingGeometryState={setDrawingGeometryState}
+        drawingMethod={selectedDrawingMethod}
         editingGeometryVertexIndex={editingGeometryVertexIndex}
         setEditingGeometryVertexIndex={setEditingGeometryVertexIndex}
 
@@ -1824,6 +1862,9 @@ function App() {
           if (isMobile) {
             setShowMobileDetails(false);
           }
+        }}
+        onGeometryDrawingComplete={() => {
+          setShowGeometryForm(true);
         }}
       />
 
@@ -2111,6 +2152,7 @@ function App() {
           defaultObjectMethod={geometryCreateObjectMethod}
           defaultPrimitiveType={selectedPrimitiveType}
           defaultDrawingMethod={selectedDrawingMethod}
+          drawingGeometryState={drawingGeometryState}
           onSave={handleSaveGeometry}
           onClose={() =>
             setShowGeometryForm(false)

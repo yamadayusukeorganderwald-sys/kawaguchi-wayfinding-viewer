@@ -8,6 +8,7 @@ function GeometryForm({
     defaultObjectMethod,
     defaultPrimitiveType,
     defaultDrawingMethod,
+    drawingGeometryState,
 }) {
     const [name, setName] = useState("");
     const [geometryType, setGeometryType] = useState("building");
@@ -107,21 +108,22 @@ function GeometryForm({
                     {defaultGeometryKind === "object" &&
                         !editingGeometry &&
                         defaultObjectMethod === "primitive" && (
-                        <div
-                            style={{
-                                marginTop: 8,
-                                fontSize: 12,
-                                color: "#555",
-                            }}
-                        >
-                            Object作成方法: プリミティブ
-                            {defaultPrimitiveType === "box" && "（箱）"}
-                            {defaultPrimitiveType === "extruded_polygon" && "（多角柱）"}
-                        </div>
-                    )}
-                    </div>
+                            <div
+                                style={{
+                                    marginTop: 8,
+                                    fontSize: 12,
+                                    color: "#555",
+                                }}
+                            >
+                                Object作成方法: プリミティブ
+                                {defaultPrimitiveType === "box" && "（箱）"}
+                                {defaultPrimitiveType === "extruded_polygon" && "（多角柱）"}
+                                {defaultPrimitiveType === "cylinder" && "（円柱）"}
+                            </div>
+                        )}
+                </div>
 
-                    <input
+                <input
                     placeholder="名前"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
@@ -185,6 +187,18 @@ function GeometryForm({
                             objectMethod: defaultObjectMethod,
                             primitiveType: defaultPrimitiveType,
                             drawingMethod: defaultDrawingMethod,
+                            primitiveData:
+                                defaultPrimitiveType === "cylinder"
+                                    ? {
+                                        center:
+                                            drawingGeometryState?.center ??
+                                            null,
+
+                                        radius:
+                                            drawingGeometryState?.radius ??
+                                            0,
+                                    }
+                                    : {},
                         })
                     }
                 >
