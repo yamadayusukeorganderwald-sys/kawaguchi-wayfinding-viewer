@@ -6,6 +6,8 @@ function GeometryForm({
     editingGeometry,
     defaultGeometryKind,
     defaultObjectMethod,
+    defaultPrimitiveType,
+    defaultDrawingMethod,
 }) {
     const [name, setName] = useState("");
     const [geometryType, setGeometryType] = useState("building");
@@ -113,6 +115,8 @@ function GeometryForm({
                             }}
                         >
                             Object作成方法: プリミティブ
+                            {defaultPrimitiveType === "box" && "（箱）"}
+                            {defaultPrimitiveType === "extruded_polygon" && "（多角柱）"}
                         </div>
                     )}
                     </div>
@@ -178,6 +182,9 @@ function GeometryForm({
                             base_height: baseHeight,
                             extruded_height: extrudedHeight,
                             description,
+                            objectMethod: defaultObjectMethod,
+                            primitiveType: defaultPrimitiveType,
+                            drawingMethod: defaultDrawingMethod,
                         })
                     }
                 >

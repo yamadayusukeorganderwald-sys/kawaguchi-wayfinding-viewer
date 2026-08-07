@@ -1,8 +1,12 @@
 function GeometryCreateMenu({
   visible,
   selectedGeometryKind,
+  selectedObjectMethod,
+  selectedPrimitiveType,
+  primitiveDefinitions,
   onSelectGeometryKind,
   onSelectObjectMethod,
+  onSelectPrimitiveType,
   onClose,
 }) {
   if (!visible) {
@@ -10,6 +14,9 @@ function GeometryCreateMenu({
   }
 
   const isObjectStep = selectedGeometryKind === "object";
+  const isPrimitiveStep =
+    selectedGeometryKind === "object" &&
+    selectedObjectMethod === "primitive";
 
   return (
     <div
@@ -155,6 +162,63 @@ function GeometryCreateMenu({
                   準備中
                 </div>
               </button>
+            </div>
+          </div>
+        )}
+
+        {isPrimitiveStep && (
+          <div>
+            <div
+              style={{
+                fontSize: "14px",
+                fontWeight: 700,
+                marginBottom: "12px",
+              }}
+            >
+              Step 3：プリミティブ種類
+            </div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                gap: "12px",
+              }}
+            >
+              {Object.entries(primitiveDefinitions).map(
+                ([primitiveType, definition]) => {
+                  const isSelected =
+                    selectedPrimitiveType === primitiveType;
+                  return (
+                    <button
+                      key={primitiveType}
+                      type="button"
+                      onClick={() =>
+                        definition.enabled &&
+                        onSelectPrimitiveType(primitiveType)
+                      }
+                      disabled={!definition.enabled}
+                      style={
+                        definition.enabled
+                          ? buttonStyle(
+                              isSelected
+                                ? "#d5eefc"
+                                : "#f4f9ff"
+                            )
+                          : disabledButtonStyle
+                      }
+                    >
+                      {definition.label}
+                      {!definition.enabled && (
+                        <div
+                          style={{ fontSize: "12px", color: "#888" }}
+                        >
+                          準備中
+                        </div>
+                      )}
+                    </button>
+                  );
+                }
+              )}
             </div>
           </div>
         )}

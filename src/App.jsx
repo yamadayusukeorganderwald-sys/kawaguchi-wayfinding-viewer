@@ -15,6 +15,7 @@ import DiscoveryConnectionModal from "./components/DiscoveryConnectionModal";
 import { createImageFileName } from "./utils/imageFileName";
 import DeveloperTools from "./components/DeveloperTools";
 import { InteractionMode } from "./constants/interactionMode";
+import { PRIMITIVE_DEFINITIONS } from "./constants/primitiveDefinitions";
 import { loadAreas } from "./data/areas";
 import GeometryForm from "./components/GeometryForm";
 import GeometryCreateMenu from "./components/GeometryCreateMenu";
@@ -115,8 +116,16 @@ function App() {
   const [showGeometryCreateMenu, setShowGeometryCreateMenu] = useState(false);
   const [geometryCreateKind, setGeometryCreateKind] = useState(null);
   const [geometryCreateObjectMethod, setGeometryCreateObjectMethod] = useState(null);
+  const [selectedPrimitiveType, setSelectedPrimitiveType] = useState(null);
   const [editingGeometry, setEditingGeometry] = useState(null);
   const [editingGeometryVertexIndex, setEditingGeometryVertexIndex] = useState(null);
+
+  const selectedPrimitiveDefinition =
+    selectedPrimitiveType
+      ? PRIMITIVE_DEFINITIONS[selectedPrimitiveType]
+      : null;
+  const selectedDrawingMethod =
+    selectedPrimitiveDefinition?.drawingMethod ?? null;
 
   const [interactionMode, setInteractionMode] =
     useState(InteractionMode.IDLE);
@@ -803,6 +812,7 @@ function App() {
 
     setGeometryCreateKind(null);
     setGeometryCreateObjectMethod(null);
+    setSelectedPrimitiveType(null);
     setShowGeometryCreateMenu(true);
   };
 
@@ -810,11 +820,13 @@ function App() {
     if (kind === "object") {
       setGeometryCreateKind("object");
       setGeometryCreateObjectMethod(null);
+      setSelectedPrimitiveType(null);
       return;
     }
 
     setGeometryCreateKind(kind);
     setGeometryCreateObjectMethod(null);
+    setSelectedPrimitiveType(null);
     setShowGeometryCreateMenu(false);
     startGeometryDrawing();
   };
@@ -826,6 +838,20 @@ function App() {
 
     setGeometryCreateKind("object");
     setGeometryCreateObjectMethod("primitive");
+    setSelectedPrimitiveType(null);
+  };
+
+  const handleSelectPrimitiveType = (primitiveType) => {
+    const primitiveDefinition =
+      PRIMITIVE_DEFINITIONS[primitiveType];
+
+    if (!primitiveDefinition || !primitiveDefinition.enabled) {
+      return;
+    }
+
+    setGeometryCreateKind("object");
+    setGeometryCreateObjectMethod("primitive");
+    setSelectedPrimitiveType(primitiveType);
     setShowGeometryCreateMenu(false);
     startGeometryDrawing();
   };
@@ -834,6 +860,7 @@ function App() {
     setShowGeometryCreateMenu(false);
     setGeometryCreateKind(null);
     setGeometryCreateObjectMethod(null);
+    setSelectedPrimitiveType(null);
   };
 
   const handleStartGeometryEditing = () => {
@@ -863,6 +890,7 @@ function App() {
     setEditingGeometryVertexIndex(null);
     setGeometryCreateKind(null);
     setGeometryCreateObjectMethod(null);
+    setSelectedPrimitiveType(null);
     setInteractionMode(InteractionMode.IDLE);
   };
 
@@ -878,6 +906,9 @@ function App() {
       id: _id,
       geometryKind,
       geometryType,
+      objectMethod: _objectMethod,
+      primitiveType: _primitiveType,
+      drawingMethod: _drawingMethod,
       ...commonData
     } = geometry;
 
@@ -925,6 +956,9 @@ function App() {
       geometryKind,
       geometryType,
       extruded_height,
+      objectMethod: _objectMethod,
+      primitiveType: _primitiveType,
+      drawingMethod: _drawingMethod,
       ...commonData
     } = geometry;
 
@@ -1172,6 +1206,9 @@ function App() {
       geometryKind,
       geometryType,
       extruded_height,
+      objectMethod: _objectMethod,
+      primitiveType: _primitiveType,
+      drawingMethod: _drawingMethod,
       ...commonData
     } = geometry;
 
@@ -2057,8 +2094,12 @@ function App() {
         <GeometryCreateMenu
           visible={showGeometryCreateMenu}
           selectedGeometryKind={geometryCreateKind}
+          selectedObjectMethod={geometryCreateObjectMethod}
+          selectedPrimitiveType={selectedPrimitiveType}
+          primitiveDefinitions={PRIMITIVE_DEFINITIONS}
           onSelectGeometryKind={handleSelectGeometryKind}
           onSelectObjectMethod={handleSelectObjectMethod}
+          onSelectPrimitiveType={handleSelectPrimitiveType}
           onClose={handleCloseGeometryCreateMenu}
         />
       )}
@@ -2068,6 +2109,8 @@ function App() {
           editingGeometry={editingGeometry}
           defaultGeometryKind={geometryCreateKind}
           defaultObjectMethod={geometryCreateObjectMethod}
+          defaultPrimitiveType={selectedPrimitiveType}
+          defaultDrawingMethod={selectedDrawingMethod}
           onSave={handleSaveGeometry}
           onClose={() =>
             setShowGeometryForm(false)
