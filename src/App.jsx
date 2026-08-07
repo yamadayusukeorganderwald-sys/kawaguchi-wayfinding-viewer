@@ -17,6 +17,7 @@ import DeveloperTools from "./components/DeveloperTools";
 import { InteractionMode } from "./constants/interactionMode";
 import { loadAreas } from "./data/areas";
 import GeometryForm from "./components/GeometryForm";
+import GeometryCreateMenu from "./components/GeometryCreateMenu";
 
 const toAppEdge = (edge) => ({
   id: edge.id,
@@ -111,6 +112,9 @@ function App() {
 
   const [drawingGeometryPoints, setDrawingGeometryPoints] = useState([]);
   const [showGeometryForm, setShowGeometryForm] = useState(false);
+  const [showGeometryCreateMenu, setShowGeometryCreateMenu] = useState(false);
+  const [geometryCreateKind, setGeometryCreateKind] = useState(null);
+  const [geometryCreateObjectMethod, setGeometryCreateObjectMethod] = useState(null);
   const [editingGeometry, setEditingGeometry] = useState(null);
   const [editingGeometryVertexIndex, setEditingGeometryVertexIndex] = useState(null);
 
@@ -783,11 +787,53 @@ function App() {
     }
   };
 
-  const handleStartGeometryDrawing = () => {
+  const startGeometryDrawing = () => {
     setDrawingGeometryPoints([]);
+    setEditingGeometry(null);
     setInteractionMode(
       InteractionMode.GEOMETRY_DRAWING
     );
+  };
+
+  const handleStartGeometryDrawing = () => {
+    if (interactionMode !== InteractionMode.IDLE) {
+      startGeometryDrawing();
+      return;
+    }
+
+    setGeometryCreateKind(null);
+    setGeometryCreateObjectMethod(null);
+    setShowGeometryCreateMenu(true);
+  };
+
+  const handleSelectGeometryKind = (kind) => {
+    if (kind === "object") {
+      setGeometryCreateKind("object");
+      setGeometryCreateObjectMethod(null);
+      return;
+    }
+
+    setGeometryCreateKind(kind);
+    setGeometryCreateObjectMethod(null);
+    setShowGeometryCreateMenu(false);
+    startGeometryDrawing();
+  };
+
+  const handleSelectObjectMethod = (method) => {
+    if (method !== "primitive") {
+      return;
+    }
+
+    setGeometryCreateKind("object");
+    setGeometryCreateObjectMethod("primitive");
+    setShowGeometryCreateMenu(false);
+    startGeometryDrawing();
+  };
+
+  const handleCloseGeometryCreateMenu = () => {
+    setShowGeometryCreateMenu(false);
+    setGeometryCreateKind(null);
+    setGeometryCreateObjectMethod(null);
   };
 
   const handleStartGeometryEditing = () => {
@@ -815,6 +861,8 @@ function App() {
     setEditingGeometry(null);
     setDrawingGeometryPoints([]);
     setEditingGeometryVertexIndex(null);
+    setGeometryCreateKind(null);
+    setGeometryCreateObjectMethod(null);
     setInteractionMode(InteractionMode.IDLE);
   };
 
@@ -2005,9 +2053,21 @@ function App() {
         />
       )}
 
+      {showGeometryCreateMenu && (
+        <GeometryCreateMenu
+          visible={showGeometryCreateMenu}
+          selectedGeometryKind={geometryCreateKind}
+          onSelectGeometryKind={handleSelectGeometryKind}
+          onSelectObjectMethod={handleSelectObjectMethod}
+          onClose={handleCloseGeometryCreateMenu}
+        />
+      )}
+
       {showGeometryForm && (
         <GeometryForm
           editingGeometry={editingGeometry}
+          defaultGeometryKind={geometryCreateKind}
+          defaultObjectMethod={geometryCreateObjectMethod}
           onSave={handleSaveGeometry}
           onClose={() =>
             setShowGeometryForm(false)
