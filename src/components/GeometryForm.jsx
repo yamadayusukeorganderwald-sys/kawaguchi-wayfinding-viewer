@@ -4,16 +4,25 @@ function GeometryForm({
     onSave,
     onClose,
     editingGeometry,
+    defaultGeometryKind,
+    defaultObjectMethod,
 }) {
     const [name, setName] = useState("");
     const [geometryType, setGeometryType] = useState("building");
     const [baseHeight, setBaseHeight] = useState(0);
     const [extrudedHeight, setExtrudedHeight] = useState(10);
     const [description, setDescription] = useState("");
-    const [geometryKind, setGeometryKind] = useState("area");
+    const [geometryKind, setGeometryKind] = useState(
+        defaultGeometryKind ?? "area"
+    );
 
     useEffect(() => {
-        if (!editingGeometry) return;
+        if (!editingGeometry) {
+            setGeometryKind(
+                defaultGeometryKind ?? "area"
+            );
+            return;
+        }
 
         setName(editingGeometry.name ?? "");
 
@@ -45,7 +54,7 @@ function GeometryForm({
         } else if (editingGeometry.space_type) {
             setGeometryKind("space");
         }
-    }, [editingGeometry]);
+    }, [editingGeometry, defaultGeometryKind]);
 
     return (
         <div
@@ -93,9 +102,22 @@ function GeometryForm({
                             Space（建物内部）
                         </option>
                     </select>
-                </div>
+                    {defaultGeometryKind === "object" &&
+                        !editingGeometry &&
+                        defaultObjectMethod === "primitive" && (
+                        <div
+                            style={{
+                                marginTop: 8,
+                                fontSize: 12,
+                                color: "#555",
+                            }}
+                        >
+                            Object作成方法: プリミティブ
+                        </div>
+                    )}
+                    </div>
 
-                <input
+                    <input
                     placeholder="名前"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
