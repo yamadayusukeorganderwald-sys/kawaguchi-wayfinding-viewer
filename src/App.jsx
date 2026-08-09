@@ -1179,7 +1179,14 @@ function App() {
       id,
       geometryKind,
       geometryType,
-      flatCoordinates,
+
+      flatCoordinates: _flatCoordinates,
+
+      objectMethod: _objectMethod,
+      primitiveType: _primitiveType,
+      drawingMethod: _drawingMethod,
+      primitiveData: _primitiveData,
+
       ...commonData
     } = geometry;
 
@@ -1187,6 +1194,8 @@ function App() {
       ...commonData,
       area_type: geometryType,
     };
+
+    console.log("Area updateData", updateData);
 
     const { data, error } = await supabase
       .from("areas")
@@ -1241,19 +1250,33 @@ function App() {
       geometryKind,
       geometryType,
       extruded_height,
+
       objectMethod: _objectMethod,
-      primitiveType: _primitiveType,
-      drawingMethod: _drawingMethod,
+      primitiveType,
+      drawingMethod,
+      primitiveData,
+
+      flatCoordinates: _flatCoordinates,
+
       ...commonData
     } = geometry;
 
+    const updateData = {
+      ...commonData,
+
+      object_type: geometryType,
+      height: extruded_height,
+
+      primitive_type: primitiveType ?? null,
+      drawing_method: drawingMethod ?? null,
+      primitive_data: primitiveData ?? null,
+    };
+
+    console.log("Object updateData", updateData);
+
     const { data, error } = await supabase
       .from("objects")
-      .update({
-        ...commonData,
-        object_type: geometryType,
-        height: extruded_height,
-      })
+      .update(updateData)
       .eq("id", id)
       .select()
       .single();
@@ -1284,60 +1307,11 @@ function App() {
       data,
     });
 
-    setEditingGeometry(null);
     resetGeometryEditing();
 
     console.log(
       "Object更新完了",
       data
-    );
-  };
-
-  const handleDeleteArea = async (targetArea) => {
-    const confirmed = window.confirm(
-      `「${targetArea.name}」を削除しますか？`
-    );
-
-    if (!confirmed) return;
-
-    const { error } = await supabase
-      .from("areas")
-      .delete()
-      .eq("id", targetArea.id);
-
-    if (error) {
-      console.error(
-        "Area削除失敗:",
-        error
-      );
-
-      alert(
-        `Areaを削除できませんでした\n${error.message}`
-      );
-
-      return;
-    }
-
-    setAreaList((current) =>
-      current.filter(
-        (area) => area.id !== targetArea.id
-      )
-    );
-
-    if (
-      selectedEntity?.type === "area" &&
-      selectedEntity.data.id === targetArea.id
-    ) {
-      setSelectedEntity(null);
-    }
-
-    if (editingGeometry?.id === targetArea.id) {
-      resetGeometryEditing();
-    }
-
-    console.log(
-      "Area削除完了",
-      targetArea
     );
   };
 

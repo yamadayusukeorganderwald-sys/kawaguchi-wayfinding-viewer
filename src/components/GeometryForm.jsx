@@ -24,6 +24,16 @@ function GeometryForm({
             setGeometryKind(
                 defaultGeometryKind ?? "area"
             );
+
+            if (
+                defaultPrimitiveType === "cylinder" &&
+                drawingGeometryState?.height != null
+            ) {
+                setExtrudedHeight(
+                    drawingGeometryState.height
+                );
+            }
+
             return;
         }
 
@@ -57,7 +67,12 @@ function GeometryForm({
         } else if (editingGeometry.space_type) {
             setGeometryKind("space");
         }
-    }, [editingGeometry, defaultGeometryKind]);
+    }, [
+        editingGeometry,
+        defaultGeometryKind,
+        defaultPrimitiveType,
+        drawingGeometryState,
+    ]);
 
     return (
         <div

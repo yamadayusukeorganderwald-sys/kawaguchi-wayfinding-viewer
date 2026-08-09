@@ -1732,16 +1732,25 @@ function MapViewer({
         if (!viewer || viewer.isDestroyed()) return;
 
         objectEntitiesRef.current.forEach((entity) => {
-            if (!entity.object || !entity.polygon) return;
+            if (!entity.object) return;
 
             const isSelected =
                 selectedEntity?.type === "object" &&
                 selectedEntity.data?.id === entity.object.id;
 
-            entity.polygon.material =
-                isSelected
-                    ? Cesium.Color.LIGHTGRAY.withAlpha(0.25)
-                    : Cesium.Color.LIGHTGRAY.withAlpha(1);
+            if (entity.polygon) {
+                entity.polygon.material =
+                    isSelected
+                        ? Cesium.Color.LIGHTGRAY.withAlpha(0.25)
+                        : Cesium.Color.LIGHTGRAY.withAlpha(1);
+            }
+
+            if (entity.cylinder) {
+                entity.cylinder.material =
+                    isSelected
+                        ? Cesium.Color.LIGHTGRAY.withAlpha(0.25)
+                        : Cesium.Color.LIGHTGRAY.withAlpha(1);
+            }
         });
     }, [selectedEntity]);
 
