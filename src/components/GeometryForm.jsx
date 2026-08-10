@@ -74,6 +74,27 @@ function GeometryForm({
         drawingGeometryState,
     ]);
 
+    const fieldStyle = {
+        marginBottom: 18,
+    };
+
+    const labelStyle = {
+        display: "block",
+        marginBottom: 6,
+        fontSize: "13px",
+        fontWeight: 600,
+        color: "#444",
+    };
+
+    const inputStyle = {
+        width: "100%",
+        padding: "10px 12px",
+        fontSize: "16px",
+        boxSizing: "border-box",
+        border: "1px solid #ccc",
+        borderRadius: "8px",
+    };
+
     return (
         <div
             style={{
@@ -89,24 +110,111 @@ function GeometryForm({
             <div
                 style={{
                     background: "#fff",
-                    width: 360,
-                    padding: 20,
-                    borderRadius: 12,
+                    width: "min(360px, calc(100vw - 24px))",
+                    boxSizing: "border-box",
+                    padding: "24px",
+                    borderRadius: "12px",
+                    maxHeight: "80dvh",
+                    overflowY: "auto",
+                    boxShadow: "0 12px 40px rgba(0, 0, 0, 0.25)",
                 }}
             >
-                <h3>
-                    {editingGeometry ? "形状編集" : "形状登録"}
-                </h3>
+                <div
+                    style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginBottom: "20px",
+                    }}
+                >
+                    <h2
+                        style={{
+                            margin: 0,
+                            fontSize: "18px",
+                        }}
+                    >
+                        {editingGeometry ? "形状編集" : "形状登録"}
+                    </h2>
+
+                    <div
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                        }}
+                    >
+                        <button
+                            type="button"
+                            onClick={() =>
+                                onSave({
+                                    id: editingGeometry?.id ?? null,
+                                    geometryKind,
+                                    name,
+                                    geometryType,
+                                    base_height: baseHeight,
+                                    extruded_height: extrudedHeight,
+                                    description,
+                                    objectMethod: defaultObjectMethod,
+                                    primitiveType: defaultPrimitiveType,
+                                    drawingMethod: defaultDrawingMethod,
+                                    primitiveData:
+                                        defaultPrimitiveType === "cylinder"
+                                            ? {
+                                                center:
+                                                    drawingGeometryState?.center ??
+                                                    null,
+
+                                                radius:
+                                                    drawingGeometryState?.radius ??
+                                                    0,
+                                            }
+                                            : {},
+                                })
+                            }
+                            style={{
+                                padding: "6px 12px",
+                                border: "none",
+                                borderRadius: "6px",
+                                background: "#2196f3",
+                                color: "#fff",
+                                cursor: "pointer",
+                            }}
+                        >
+                            保存
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            style={{
+                                border: "none",
+                                background: "transparent",
+                                fontSize: "22px",
+                                cursor: "pointer",
+                                lineHeight: 1,
+                                padding: "2px 4px",
+                            }}
+                        >
+                            ×
+                        </button>
+                    </div>
+                </div>
 
                 <div style={{ marginBottom: 12 }}>
-                    <label>保存種類</label>
+                    <label style={labelStyle}>
+                        保存種類
+                    </label>
 
                     <select
                         value={geometryKind}
                         onChange={(e) =>
                             setGeometryKind(e.target.value)
                         }
-                        style={{ width: "100%" }}
+                        style={{
+                            width: "100%",
+                            fontSize: "16px",
+                            boxSizing: "border-box",
+                        }}
                     >
                         <option value="area">
                             Area（歩行空間）
@@ -138,94 +246,108 @@ function GeometryForm({
                         )}
                 </div>
 
-                <input
-                    placeholder="名前"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    style={{ width: "100%", marginBottom: 12 }}
-                />
+                <div style={fieldStyle}>
+                    <label style={labelStyle}>
+                        名前
+                    </label>
 
-                <select
-                    value={geometryType}
-                    onChange={(e) =>
-                        setGeometryType(e.target.value)
-                    }
-                    style={{ width: "100%", marginBottom: 12 }}
-                >
-                    <option value="building">建物</option>
-                    <option value="plaza">広場</option>
-                    <option value="deck">デッキ</option>
-                    <option value="roof">屋上</option>
-                    <option value="passage">通路</option>
-                    <option value="restricted">立入禁止</option>
-                </select>
+                    <input
+                        placeholder="例：キュポ・ラ広場"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        style={inputStyle}
+                    />
+                </div>
 
-                <input
-                    type="number"
-                    placeholder="基準高さ"
-                    value={baseHeight}
-                    onChange={(e) =>
-                        setBaseHeight(Number(e.target.value))
-                    }
-                    style={{ width: "100%", marginBottom: 12 }}
-                />
+                <div style={fieldStyle}>
+                    <label style={labelStyle}>
+                        種類
+                    </label>
 
-                <input
-                    type="number"
-                    placeholder="高さ"
-                    value={extrudedHeight}
-                    onChange={(e) =>
-                        setExtrudedHeight(Number(e.target.value))
-                    }
-                    style={{ width: "100%", marginBottom: 12 }}
-                />
+                    <select
+                        value={geometryType}
+                        onChange={(e) =>
+                            setGeometryType(e.target.value)
+                        }
+                        style={inputStyle}
+                    >
+                        <option value="building">建物</option>
+                        <option value="plaza">広場</option>
+                        <option value="deck">デッキ</option>
+                        <option value="roof">屋上</option>
+                        <option value="passage">通路</option>
+                        <option value="restricted">立入禁止</option>
+                    </select>
+                </div>
 
-                <textarea
-                    placeholder="説明"
-                    value={description}
-                    onChange={(e) =>
-                        setDescription(e.target.value)
-                    }
-                    style={{ width: "100%", marginBottom: 12 }}
-                />
+                <div style={fieldStyle}>
+                    <label style={labelStyle}>
+                        基準高さ
+                    </label>
 
-                <button
-                    onClick={() =>
-                        onSave({
-                            id: editingGeometry?.id ?? null,
-                            geometryKind,
-                            name,
-                            geometryType,
-                            base_height: baseHeight,
-                            extruded_height: extrudedHeight,
-                            description,
-                            objectMethod: defaultObjectMethod,
-                            primitiveType: defaultPrimitiveType,
-                            drawingMethod: defaultDrawingMethod,
-                            primitiveData:
-                                defaultPrimitiveType === "cylinder"
-                                    ? {
-                                        center:
-                                            drawingGeometryState?.center ??
-                                            null,
+                    <input
+                        type="number"
+                        value={baseHeight}
+                        onChange={(e) =>
+                            setBaseHeight(Number(e.target.value))
+                        }
+                        style={inputStyle}
+                    />
 
-                                        radius:
-                                            drawingGeometryState?.radius ??
-                                            0,
-                                    }
-                                    : {},
-                        })
-                    }
-                >
-                    保存
-                </button>
+                    <div
+                        style={{
+                            marginTop: 5,
+                            fontSize: "12px",
+                            color: "#777",
+                        }}
+                    >
+                        地面から形状を開始する高さ（m）
+                    </div>
+                </div>
 
-                <button
-                    onClick={onClose}
-                    style={{ marginLeft: 8 }}
-                >
-                    キャンセル
-                </button>
+                <div style={fieldStyle}>
+                    <label style={labelStyle}>
+                        高さ
+                    </label>
+
+                    <input
+                        type="number"
+                        value={extrudedHeight}
+                        onChange={(e) =>
+                            setExtrudedHeight(Number(e.target.value))
+                        }
+                        style={inputStyle}
+                    />
+
+                    <div
+                        style={{
+                            marginTop: 5,
+                            fontSize: "12px",
+                            color: "#777",
+                        }}
+                    >
+                        形状そのものの高さ（m）
+                    </div>
+                </div>
+
+                <div style={fieldStyle}>
+                    <label style={labelStyle}>
+                        説明
+                    </label>
+
+                    <textarea
+                        placeholder="この場所・形状についてのメモ"
+                        value={description}
+                        onChange={(e) =>
+                            setDescription(e.target.value)
+                        }
+                        style={{
+                            ...inputStyle,
+                            minHeight: "80px",
+                            resize: "vertical",
+                        }}
+                    />
+                </div>
             </div>
         </div>
     );

@@ -355,6 +355,15 @@ function MapViewer({
             });
             const picked = viewer.scene.pick(movement.position);
 
+            const pickedObjects =
+                viewer.scene.drillPick(movement.position);
+
+            const pickedPlace =
+                pickedObjects.find(
+                    (pickedObject) =>
+                        pickedObject?.id?.place
+                );
+
             const pickedEntityId = picked?.id?.id;
 
             if (
@@ -399,7 +408,7 @@ function MapViewer({
                 }
             }
 
-            if (!picked?.id?.place) {
+            if (!pickedPlace?.id?.place) {
                 return;
             }
 
@@ -414,7 +423,8 @@ function MapViewer({
             // 前回のタイマーが残っていたら解除
             cancelPlaceLongPress();
 
-            pressedPlaceRef.current = picked.id.place;
+            pressedPlaceRef.current =
+                pickedPlace.id.place;
 
             placePressStartPositionRef.current = {
                 x: movement.position.x,
@@ -626,6 +636,15 @@ function MapViewer({
             // クリックした場所にマーカーがあるか確認
             const picked = viewer.scene.pick(click.position);
 
+            const pickedObjects =
+                viewer.scene.drillPick(click.position);
+
+            const pickedPlace =
+                pickedObjects.find(
+                    (pickedObject) =>
+                        pickedObject?.id?.place
+                );
+
             // 現在地マーカーをクリック
             if (picked?.id?.isCurrentPosition) {
                 onCurrentPositionClickRef.current?.(
@@ -653,9 +672,9 @@ function MapViewer({
                 return;
             }
 
-            // マーカーをクリックした場合
-            if (picked && picked.id && picked.id.place) {
-                setPlace(picked.id.place);
+            // 地点は周辺のpick結果から優先して拾う
+            if (pickedPlace?.id?.place) {
+                setPlace(pickedPlace.id.place);
                 return;
             }
 
@@ -1329,8 +1348,38 @@ function MapViewer({
                     : undefined,
             });
 
+
             entity.place = item;
             entitiesRef.current.push(entity);
+
+            const hitEntity = viewer.entities.add({
+                position: Cesium.Cartesian3.fromDegrees(
+                    item.longitude,
+                    item.latitude,
+                    getLevelHeight(item.level)
+                ),
+
+                point: {
+                    pixelSize: 42,
+
+                    // 完全透明より、ごく薄くしておく方が
+                    // Cesium上でpick対象として安定しやすい
+                    color: Cesium.Color.WHITE.withAlpha(0.01),
+
+                    outlineColor:
+                        Cesium.Color.WHITE.withAlpha(0.01),
+
+                    outlineWidth: 0,
+
+                    disableDepthTestDistance:
+                        Number.POSITIVE_INFINITY,
+                },
+            });
+
+            hitEntity.place = item;
+            hitEntity.isPlaceHitArea = true;
+
+            entitiesRef.current.push(hitEntity);
 
             if (isStart) {
                 const startMarker = viewer.entities.add({
@@ -1938,6 +1987,8 @@ function MapViewer({
         entitiesRef.current.forEach((entity) => {
             // 起点リングなど、placeを持たないEntityは除外
             if (!entity.place) return;
+            // タップ判定専用Entityは見た目変更の対象外
+            if (entity.isPlaceHitArea) return;
 
             const isSelected = entity.place.id === place.id;
             const isRoute = entity.place.type === "route";

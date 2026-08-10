@@ -221,7 +221,6 @@ function DiscoveryForm({
                     }
                     placeholder="ここから夕日がきれい"
                     rows={4}
-                    autoFocus
                     disabled={isSaving}
                     style={{
                         boxSizing: "border-box",
