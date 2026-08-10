@@ -21,7 +21,7 @@ function PlaceForm({
 }) {
 
     const [name, setName] = useState(
-        editingPlace?.name ?? ""
+        editingPlace?.name ?? "新規地点"
     );
 
     const [type, setType] = useState(

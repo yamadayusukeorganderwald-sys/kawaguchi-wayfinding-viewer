@@ -1802,9 +1802,17 @@ function MapViewer({
                         ),
                     ],
 
-                    material: Cesium.Color.WHITE.withAlpha(0.75),
-                    width: 3,
-                    clampToGround: false
+                    material:
+                        edge.road_context === "crossing"
+                            ? Cesium.Color.fromCssColorString("#F57C00").withAlpha(1)
+                            : Cesium.Color.fromCssColorString("#FFE9A6").withAlpha(0.9),
+
+                    width:
+                        edge.road_context === "crossing"
+                            ? 5
+                            : 3,
+
+                    clampToGround: false,
                 },
             });
 
@@ -1859,13 +1867,27 @@ function MapViewer({
             const isSelected =
                 selectedEdge?.id === entity.edge.id;
 
-            entity.polyline.material =
-                isSelected
-                    ? Cesium.Color.CYAN.withAlpha(1)
-                    : Cesium.Color.WHITE.withAlpha(0.75);
+            if (isSelected) {
+                entity.polyline.material =
+                    Cesium.Color.CYAN.withAlpha(1);
+            } else if (
+                entity.edge?.road_context === "crossing"
+            ) {
+                entity.polyline.material =
+                    Cesium.Color.fromCssColorString("#F57C00")
+                        .withAlpha(1);
+            } else {
+                entity.polyline.material =
+                    Cesium.Color.fromCssColorString("#FFE9A6")
+                        .withAlpha(0.9)
+            }
 
             entity.polyline.width =
-                isSelected ? 6 : 3;
+                isSelected
+                    ? 6
+                    : entity.edge?.road_context === "crossing"
+                        ? 5
+                        : 3;
         });
     }, [selectedEdge]);
 

@@ -105,7 +105,6 @@ function MobileBottomBar({
 
   const detailsOpen =
     isCurrentPositionSelected ||
-    isUnregisteredPosition ||
     showDetails;
 
   const actionButtonStyle = {
@@ -195,7 +194,7 @@ function MobileBottomBar({
           </div>
         )}
       </div>
-      {!isCurrentPositionSelected && !isUnregisteredPosition && (
+      {!isCurrentPositionSelected && (
         <div
           style={{
             display: "flex",
@@ -204,26 +203,30 @@ function MobileBottomBar({
             gap: "16px",
           }}
         >
-          <button
-            type="button"
-            onClick={handleEdit}
-            style={actionButtonStyle}
-          >
-            <FiEdit2 size={14} />
-            編集
-          </button>
+          {!isUnregisteredPosition && (
+            <>
+              <button
+                type="button"
+                onClick={handleEdit}
+                style={actionButtonStyle}
+              >
+                <FiEdit2 size={14} />
+                編集
+              </button>
 
-          <button
-            type="button"
-            onClick={handleDelete}
-            style={{
-              ...actionButtonStyle,
-              color: "#c62828",
-            }}
-          >
-            <FiTrash2 size={14} />
-            削除
-          </button>
+              <button
+                type="button"
+                onClick={handleDelete}
+                style={{
+                  ...actionButtonStyle,
+                  color: "#c62828",
+                }}
+              >
+                <FiTrash2 size={14} />
+                削除
+              </button>
+            </>
+          )}
 
           <button
             type="button"
@@ -242,47 +245,49 @@ function MobileBottomBar({
               </>
             )}
           </button>
-          {hasNearbyDiscoveries && (
-            <button
-              ref={discoveryButtonRef}
-              type="button"
-              onClick={() => {
-                const nextOpen = !showDiscoveries;
 
-                if (
-                  nextOpen &&
-                  discoveryButtonRef.current
-                ) {
-                  setDiscoveryAnchorRect(
-                    discoveryButtonRef.current.getBoundingClientRect()
-                  );
-                }
+          {!isUnregisteredPosition &&
+            hasNearbyDiscoveries && (
+              <button
+                ref={discoveryButtonRef}
+                type="button"
+                onClick={() => {
+                  const nextOpen = !showDiscoveries;
 
-                setShowDiscoveries(nextOpen);
-              }}
-              style={{
-                ...actionButtonStyle,
-                padding: "5px 9px",
-                borderRadius: "8px",
-                background: "#4fbd45",
-                color: "#fff",
-                fontWeight: 700,
-              }}
-            >
-              <img
-                src="/icons/discovery_message_sprout_icon.svg"
-                alt=""
-                aria-hidden="true"
-                style={{
-                  width: "17px",
-                  height: "17px",
-                  display: "block",
+                  if (
+                    nextOpen &&
+                    discoveryButtonRef.current
+                  ) {
+                    setDiscoveryAnchorRect(
+                      discoveryButtonRef.current.getBoundingClientRect()
+                    );
+                  }
+
+                  setShowDiscoveries(nextOpen);
                 }}
-              />
+                style={{
+                  ...actionButtonStyle,
+                  padding: "5px 9px",
+                  borderRadius: "8px",
+                  background: "#4fbd45",
+                  color: "#fff",
+                  fontWeight: 700,
+                }}
+              >
+                <img
+                  src="/icons/discovery_message_sprout_icon.svg"
+                  alt=""
+                  aria-hidden="true"
+                  style={{
+                    width: "17px",
+                    height: "17px",
+                    display: "block",
+                  }}
+                />
 
-              発見({nearbyDiscoveries.length})
-            </button>
-          )}
+                発見({nearbyDiscoveries.length})
+              </button>
+            )}
         </div>
       )}
 

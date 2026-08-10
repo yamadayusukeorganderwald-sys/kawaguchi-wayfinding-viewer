@@ -308,11 +308,25 @@ function App() {
 
   useEffect(() => {
     if (!isMobile) return;
-    if (!routeAnchor || !place) return;
-    if (routeAnchor.id === place.id) return;
+    if (!routeAnchor) return;
+    if (!selectedEntity) return;
+
+    const destinationPlace =
+      resolveRoutePlace(selectedEntity);
+
+    if (!destinationPlace) return;
+
+    // 選択Entityが解決されたPlaceを
+    // 現在のルート終点として扱う
+    setPlace(destinationPlace);
+
+    if (routeAnchor.id === destinationPlace.id) {
+      setShowRoute(false);
+      return;
+    }
 
     setShowRoute(true);
-  }, [isMobile, routeAnchor, place]);
+  }, [isMobile, routeAnchor, selectedEntity]);
 
   const closePlaceForm = () => {
     setShowPlaceForm(false);
@@ -393,6 +407,118 @@ function App() {
     setShowRoute(false);
   };
 
+  const getEntityRoutePosition = (entity) => {
+    if (!entity?.data) return null;
+
+    const data = entity.data;
+
+    // Placeはそのまま座標を使う
+    if (entity.type === "place") {
+      return {
+        longitude: Number(data.longitude),
+        latitude: Number(data.latitude),
+      };
+    }
+
+    // 円柱Object
+    if (
+      entity.type === "object" &&
+      data.primitive_type === "cylinder"
+    ) {
+      const center = data.primitive_data?.center;
+
+      if (!center) return null;
+
+      return {
+        longitude: Number(center.longitude),
+        latitude: Number(center.latitude),
+      };
+    }
+
+    // 通常Object / Area
+    if (
+      Array.isArray(data.coordinates) &&
+      data.coordinates.length > 0
+    ) {
+      const validCoordinates =
+        data.coordinates.filter(
+          (point) =>
+            Array.isArray(point) &&
+            point.length >= 2
+        );
+
+      if (validCoordinates.length === 0) {
+        return null;
+      }
+
+      const longitude =
+        validCoordinates.reduce(
+          (sum, point) =>
+            sum + Number(point[0]),
+          0
+        ) / validCoordinates.length;
+
+      const latitude =
+        validCoordinates.reduce(
+          (sum, point) =>
+            sum + Number(point[1]),
+          0
+        ) / validCoordinates.length;
+
+      return {
+        longitude,
+        latitude,
+      };
+    }
+
+    return null;
+  };
+
+  const findNearestRoutePlace = (position) => {
+    if (!position) return null;
+    if (placeList.length === 0) return null;
+
+    let nearestPlace = null;
+    let nearestDistance = Infinity;
+
+    placeList.forEach((targetPlace) => {
+      const distance =
+        calculateDistanceMeters(
+          position.longitude,
+          position.latitude,
+          Number(targetPlace.longitude),
+          Number(targetPlace.latitude)
+        );
+
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearestPlace = targetPlace;
+      }
+    });
+
+    return nearestPlace;
+  };
+
+  const resolveRoutePlace = (entity) => {
+    if (!entity) return null;
+
+    if (entity.type === "place") {
+      return entity.data;
+    }
+
+    if (
+      entity.type === "object" ||
+      entity.type === "area"
+    ) {
+      const position =
+        getEntityRoutePosition(entity);
+
+      return findNearestRoutePlace(position);
+    }
+
+    return null;
+  };
+
   const handlePlaceSelect = (selectedPlace) => {
     if (!selectedPlace) return;
 
@@ -425,7 +551,6 @@ function App() {
       type: "object",
       data: object,
     });
-    setShowMobileDetails(true);
     setSelectedEdge(null);
     setIsCurrentPositionSelected(false);
     setClickedPosition(null);
@@ -440,10 +565,6 @@ function App() {
     setSelectedEdge(null);
     setIsCurrentPositionSelected(false);
     setClickedPosition(null);
-
-    if (isMobile) {
-      setShowMobileDetails(true);
-    }
   };
 
   const handleStartEdgeSplit = () => {
@@ -1883,9 +2004,25 @@ function App() {
           onCancelSplit={handleCancelEdgeSplit}
 
           onSetRouteAnchor={() => {
-            if (!place) return;
+            const routePlace =
+              resolveRoutePlace(selectedEntity);
 
-            setRouteAnchor(place);
+            if (!routePlace) {
+              alert(
+                "この対象からルート地点を取得できませんでした"
+              );
+              return;
+            }
+
+            console.log(
+              "ルート起点に変換:",
+              {
+                selectedEntity,
+                routePlace,
+              }
+            );
+
+            setRouteAnchor(routePlace);
             setShowRoute(false);
           }}
 
