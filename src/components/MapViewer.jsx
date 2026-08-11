@@ -10,8 +10,8 @@ const LEVEL_HEIGHTS = {
     [-1]: -5,
     [0]: 0,
     [1]: 2.5,
-    [2]: 5,
-    [3]: 7.5,
+    [2]: 7.5,
+    [3]: 12,
 };
 
 const getLevelHeight = (level) => {
@@ -297,6 +297,50 @@ function MapViewer({
         });
 
         viewerRef.current = viewer;
+
+        // ===== ペデストリアンデッキ GLB テスト表示 =====
+
+        const DECK_LONGITUDE = 139.71725;
+        const DECK_LATITUDE = 35.8023;
+        const DECK_HEIGHT = -0.5;
+        const DECK_HEADING = 90;
+
+        const deckPosition = Cesium.Cartesian3.fromDegrees(
+            DECK_LONGITUDE,
+            DECK_LATITUDE,
+            DECK_HEIGHT
+        );
+
+        const deckOrientation =
+            Cesium.Transforms.headingPitchRollQuaternion(
+                deckPosition,
+                new Cesium.HeadingPitchRoll(
+                    Cesium.Math.toRadians(DECK_HEADING),
+                    0,
+                    0
+                )
+            );
+
+        const deckModel = viewer.entities.add({
+            name: "川口駅東口ペデストリアンデッキ",
+
+            position: deckPosition,
+
+            orientation: deckOrientation,
+
+            model: {
+                uri: "/models/kawaguchi_pedestrian_deck_01.glb",
+                scale: 1.0,
+                minimumPixelSize: 0,
+                maximumScale: 200,
+
+                color: Cesium.Color.fromCssColorString("#ff4d00"),
+                colorBlendMode: Cesium.ColorBlendMode.MIX,
+                colorBlendAmount: 0.3,
+            },
+        });
+
+        // ===== GLB テスト表示ここまで =====
 
         const logCameraPosition = (event) => {
             if (event.key.toLowerCase() !== "p") return;
