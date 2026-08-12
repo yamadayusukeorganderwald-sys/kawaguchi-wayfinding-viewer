@@ -1059,6 +1059,7 @@ function App() {
       objectMethod: _objectMethod,
       primitiveType: _primitiveType,
       drawingMethod: _drawingMethod,
+      primitiveData: _primitiveData,
       ...commonData
     } = geometry;
 
@@ -1505,6 +1506,42 @@ function App() {
 
       alert(
         `Objectを削除できませんでした\n${error.message}`
+      );
+    }
+  };
+
+  const handleDeleteArea = async (targetArea) => {
+    const confirmed = window.confirm(
+      `「${targetArea.name}」を削除しますか？`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      const { error } = await supabase
+        .from("areas")
+        .delete()
+        .eq("id", targetArea.id);
+
+      if (error) {
+        throw error;
+      }
+
+      setAreaList((current) =>
+        current.filter(
+          (area) => area.id !== targetArea.id
+        )
+      );
+
+      setSelectedEntity(null);
+      setEditingGeometry(null);
+
+      console.log("Area削除完了", targetArea);
+    } catch (error) {
+      console.error("Area削除失敗:", error);
+
+      alert(
+        `Areaを削除できませんでした\n${error.message}`
       );
     }
   };
