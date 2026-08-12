@@ -336,9 +336,52 @@ function MapViewer({
 
                 color: Cesium.Color.fromCssColorString("#ff4d00"),
                 colorBlendMode: Cesium.ColorBlendMode.MIX,
-                colorBlendAmount: 0.3,
+                colorBlendAmount: 0,
             },
         });
+
+        // ===== 川口駅舎 GLB テスト表示 =====
+
+        const STATION_LONGITUDE = 139.71755;
+        const STATION_LATITUDE = 35.80163;
+        const STATION_HEIGHT = 0;
+        const STATION_HEADING = 64;
+
+        const stationPosition = Cesium.Cartesian3.fromDegrees(
+            STATION_LONGITUDE,
+            STATION_LATITUDE,
+            STATION_HEIGHT
+        );
+
+        const stationOrientation =
+            Cesium.Transforms.headingPitchRollQuaternion(
+                stationPosition,
+                new Cesium.HeadingPitchRoll(
+                    Cesium.Math.toRadians(STATION_HEADING),
+                    0,
+                    0
+                )
+            );
+
+        viewer.entities.add({
+            name: "川口駅舎",
+
+            position: stationPosition,
+            orientation: stationOrientation,
+
+            model: {
+                uri: "/models/kawaguchi_station_01.glb",
+                scale: 1.0,
+                minimumPixelSize: 0,
+                maximumScale: 200,
+
+                color: Cesium.Color.WHITE,
+                colorBlendMode: Cesium.ColorBlendMode.MIX,
+                colorBlendAmount: 0,
+            },
+        });
+
+        // ===== 川口駅舎 GLB テスト表示ここまで =====
 
         // ===== GLB テスト表示ここまで =====
 
@@ -1897,8 +1940,8 @@ function MapViewer({
 
                     material:
                         edge.road_context === "crossing"
-                            ? Cesium.Color.fromCssColorString("#F57C00").withAlpha(1)
-                            : Cesium.Color.fromCssColorString("#FFE9A6").withAlpha(0.9),
+                            ? Cesium.Color.fromCssColorString("#F57C00").withAlpha(0.5)
+                            : Cesium.Color.fromCssColorString("#FFE9A6").withAlpha(0.5),
 
                     width:
                         edge.road_context === "crossing"
@@ -1968,11 +2011,11 @@ function MapViewer({
             ) {
                 entity.polyline.material =
                     Cesium.Color.fromCssColorString("#F57C00")
-                        .withAlpha(1);
+                        .withAlpha(0.5);
             } else {
                 entity.polyline.material =
                     Cesium.Color.fromCssColorString("#FFE9A6")
-                        .withAlpha(0.9)
+                        .withAlpha(0.5)
             }
 
             entity.polyline.width =
