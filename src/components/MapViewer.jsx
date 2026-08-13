@@ -6,6 +6,7 @@ import { getClosestPointOnSegment } from "../utils/geometry";
 import { useGeometryDrawing } from "../hooks/useGeometryDrawing";
 import { InteractionMode } from "../constants/interactionMode";
 import { useWalkMode } from "../hooks/useWalkMode";
+import WalkControls from "./WalkControls";
 
 const LEVEL_HEIGHTS = {
     [-1]: -5,
@@ -111,6 +112,10 @@ function MapViewer({
 }) {
     const cesiumContainer = useRef(null);
     const viewerRef = useRef(null);
+    const mobileMoveRef = useRef({
+        forward: 0,
+        right: 0,
+    });
     const [viewerReady, setViewerReady] =
         useState(false);
     const [walkMode, setWalkMode] =
@@ -167,8 +172,11 @@ function MapViewer({
             walkMode &&
             interactionMode === InteractionMode.IDLE,
 
-        baseHeight: 0,
+        baseHeight: place
+            ? getLevelHeight(place.level)
+            : 0,
         isMobile,
+        mobileMoveRef,
     });
 
     const splitTargetEdgeRef = useRef(splitTargetEdge);
@@ -2069,6 +2077,36 @@ function MapViewer({
 
         previousPlaceIdRef.current = place.id;
 
+        // 歩行モード中は地点そのものへ移動
+        if (walkMode) {
+            const walkTargetPosition =
+                Cesium.Cartesian3.fromDegrees(
+                    place.longitude,
+                    place.latitude,
+                    getLevelHeight(place.level) + 1.65
+                );
+
+            viewer.camera.flyTo({
+                destination: walkTargetPosition,
+
+                orientation: {
+                    // 今向いてる方向は維持
+                    heading: viewer.camera.heading,
+
+                    // 歩行目線
+                    pitch: Cesium.Math.toRadians(-5),
+
+                    roll: 0,
+                },
+
+                duration: 0.6,
+            });
+
+            return;
+        }
+
+
+        // 通常モードは今まで通り
         const targetPosition = Cesium.Cartesian3.fromDegrees(
             place.longitude,
             place.latitude,
@@ -2123,7 +2161,7 @@ function MapViewer({
                         : Cesium.Color.GRAY;
             }
         });
-    }, [place]);
+    }, [place, walkMode]);
 
     useEffect(() => {
         const viewer = viewerRef.current;
@@ -2557,6 +2595,12 @@ function MapViewer({
             >
                 {gpsEnabled ? "● GPS ON" : "○ GPS OFF"}
             </button>
+
+            {isMobile && walkMode && (
+                <WalkControls
+                    moveRef={mobileMoveRef}
+                />
+            )}
 
             <button
                 type="button"

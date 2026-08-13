@@ -10,6 +10,7 @@ export const useWalkMode = ({
     enabled,
     baseHeight = 0,
     isMobile = false,
+    mobileMoveRef,
 }) => {
     const keysRef = useRef({
         forward: false,
@@ -293,6 +294,12 @@ export const useWalkMode = ({
             const camera = viewer.camera;
             const keys = keysRef.current;
 
+            const mobileMove =
+                mobileMoveRef?.current ?? {
+                    forward: 0,
+                    right: 0,
+                };
+
             if (keys.up) {
                 walkHeightRef.current +=
                     movementDistance;
@@ -303,27 +310,39 @@ export const useWalkMode = ({
                     movementDistance;
             }
 
-            if (keys.forward) {
+            let forwardInput = 0;
+            let rightInput = 0;
+
+            if (keys.forward) forwardInput += 1;
+            if (keys.backward) forwardInput -= 1;
+
+            if (keys.right) rightInput += 1;
+            if (keys.left) rightInput -= 1;
+
+            forwardInput += mobileMove.forward;
+            rightInput += mobileMove.right;
+
+            if (forwardInput > 0) {
                 camera.moveForward(
-                    movementDistance
+                    movementDistance * forwardInput
                 );
             }
 
-            if (keys.backward) {
+            if (forwardInput < 0) {
                 camera.moveBackward(
-                    movementDistance
+                    movementDistance * Math.abs(forwardInput)
                 );
             }
 
-            if (keys.left) {
-                camera.moveLeft(
-                    movementDistance
-                );
-            }
-
-            if (keys.right) {
+            if (rightInput > 0) {
                 camera.moveRight(
-                    movementDistance
+                    movementDistance * rightInput
+                );
+            }
+
+            if (rightInput < 0) {
+                camera.moveLeft(
+                    movementDistance * Math.abs(rightInput)
                 );
             }
 
@@ -336,7 +355,9 @@ export const useWalkMode = ({
                 keys.left ||
                 keys.right ||
                 keys.up ||
-                keys.down
+                keys.down ||
+                mobileMove.forward !== 0 ||
+                mobileMove.right !== 0
             ) {
                 const cartographic =
                     camera.positionCartographic;
@@ -423,5 +444,6 @@ export const useWalkMode = ({
         enabled,
         baseHeight,
         isMobile,
+        mobileMoveRef,
     ]);
 };
