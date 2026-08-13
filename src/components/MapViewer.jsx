@@ -5,6 +5,7 @@ import { findShortestRoute } from "../utils/routeSearch";
 import { getClosestPointOnSegment } from "../utils/geometry";
 import { useGeometryDrawing } from "../hooks/useGeometryDrawing";
 import { InteractionMode } from "../constants/interactionMode";
+import { useWalkMode } from "../hooks/useWalkMode";
 
 const LEVEL_HEIGHTS = {
     [-1]: -5,
@@ -110,7 +111,10 @@ function MapViewer({
 }) {
     const cesiumContainer = useRef(null);
     const viewerRef = useRef(null);
-    const [viewerReady, setViewerReady] = useState(false);
+    const [viewerReady, setViewerReady] =
+        useState(false);
+    const [walkMode, setWalkMode] =
+        useState(false);
     const currentPositionEntityRef = useRef(null);
     const gpsWatchIdRef = useRef(null);
     const onCurrentPositionClickRef =
@@ -155,6 +159,18 @@ function MapViewer({
         setDrawingGeometryState,
         onGeometryDrawingComplete,
     });
+
+    useWalkMode({
+        viewerRef,
+        enabled:
+            viewerReady &&
+            walkMode &&
+            interactionMode === InteractionMode.IDLE,
+
+        baseHeight: 0,
+        isMobile,
+    });
+
     const splitTargetEdgeRef = useRef(splitTargetEdge);
     const placesRef = useRef(places);
     const splitEdgePreviewRefs = useRef([]);
@@ -219,6 +235,7 @@ function MapViewer({
             viewer.scene.screenSpaceCameraController;
 
         const isMapInteractionLocked =
+            walkMode ||
             interactionMode === InteractionMode.EDGE_SPLIT_SELECTING ||
             interactionMode === InteractionMode.EDGE_SPLIT_PLACING ||
             interactionMode === InteractionMode.PLACE_DRAGGING ||
@@ -229,7 +246,7 @@ function MapViewer({
         controller.enableZoom = !isMapInteractionLocked;
         controller.enableTilt = !isMapInteractionLocked;
         controller.enableLook = !isMapInteractionLocked;
-    }, [interactionMode]);
+    }, [interactionMode, walkMode]);
 
     const cancelPlaceLongPress = () => {
         if (placeLongPressTimerRef.current !== null) {
@@ -2507,6 +2524,10 @@ function MapViewer({
                     userSelect: "none",
                     WebkitUserSelect: "none",
                     WebkitTouchCallout: "none",
+
+                    touchAction: walkMode
+                        ? "none"
+                        : "auto",
                 }}
             />
 
@@ -2535,6 +2556,48 @@ function MapViewer({
                 }}
             >
                 {gpsEnabled ? "● GPS ON" : "○ GPS OFF"}
+            </button>
+
+            <button
+                type="button"
+                onClick={() => {
+                    setWalkMode((current) => !current);
+                }}
+                title={
+                    walkMode
+                        ? "歩行モードを終了"
+                        : "歩行モードを開始"
+                }
+                style={{
+                    position: "absolute",
+                    top: "68px",
+                    left: "16px",
+                    minWidth: "104px",
+                    height: "42px",
+                    padding: "0 14px",
+                    borderRadius: "21px",
+                    border: "none",
+
+                    background: walkMode
+                        ? "rgba(255, 152, 0, 0.95)"
+                        : "rgba(255, 255, 255, 0.95)",
+
+                    color: walkMode
+                        ? "#fff"
+                        : "#333",
+
+                    boxShadow:
+                        "0 2px 8px rgba(0,0,0,0.3)",
+
+                    fontSize: "14px",
+                    fontWeight: "bold",
+                    cursor: "pointer",
+                    zIndex: 20,
+                }}
+            >
+                {walkMode
+                    ? "🚶 WALK ON"
+                    : "🚶 WALK"}
             </button>
 
             {interactionMode === InteractionMode.PLACE_DRAGGING && (
