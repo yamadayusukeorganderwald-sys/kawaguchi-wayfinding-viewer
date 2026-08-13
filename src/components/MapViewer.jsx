@@ -2605,7 +2605,38 @@ function MapViewer({
             <button
                 type="button"
                 onClick={() => {
-                    setWalkMode((current) => !current);
+                    // WALK終了
+                    if (walkMode) {
+                        setWalkMode(false);
+                        return;
+                    }
+
+                    // WALK開始
+                    const viewer = viewerRef.current;
+
+                    if (
+                        viewer &&
+                        !viewer.isDestroyed() &&
+                        place
+                    ) {
+                        const walkStartPosition =
+                            Cesium.Cartesian3.fromDegrees(
+                                place.longitude,
+                                place.latitude,
+                                getLevelHeight(place.level) + 1.65
+                            );
+
+                        viewer.camera.setView({
+                            destination: walkStartPosition,
+                            orientation: {
+                                heading: viewer.camera.heading,
+                                pitch: Cesium.Math.toRadians(-5),
+                                roll: 0,
+                            },
+                        });
+                    }
+
+                    setWalkMode(true);
                 }}
                 title={
                     walkMode
