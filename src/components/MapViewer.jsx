@@ -323,6 +323,22 @@ function MapViewer({
 
         viewerRef.current = viewer;
 
+        // =========================
+        // Ambient Occlusion
+        // =========================
+        const ao =
+            viewer.scene.postProcessStages.ambientOcclusion;
+
+        ao.enabled = false;
+
+        ao.uniforms.intensity = 2.5;
+        ao.uniforms.bias = 0.3;
+        ao.uniforms.lengthCap = 0.2;
+        ao.uniforms.stepSize = 10.0;
+        ao.uniforms.frustumLength = 5.0;
+        ao.uniforms.directionCount = 4;
+        ao.uniforms.stepCount = 12;
+
         // ===== ペデストリアンデッキ GLB テスト表示 =====
 
         const DECK_LONGITUDE = 139.71725;
@@ -372,6 +388,94 @@ function MapViewer({
         const STATION_HEIGHT = 0;
         const STATION_HEADING = 64;
 
+        const stationToonShader = new Cesium.CustomShader({
+            lightingModel: Cesium.LightingModel.UNLIT,
+
+            fragmentShaderText: `
+    void fragmentMain(
+        FragmentInput fsInput,
+        inout czm_modelMaterial material
+    ) {
+        vec3 normal =
+            normalize(fsInput.attributes.normalEC);
+
+        vec3 lightDir =
+            normalize(vec3(0.35, 0.45, 1.0));
+
+        float ndotl =
+            dot(normal, lightDir);
+
+        // 元テクスチャはそのまま
+        vec3 baseColor =
+            material.diffuse;
+
+        vec3 toonColor;
+
+        // ==========================================
+        // 3段階セル影
+        // 元色を潰さず、明るさだけ変える
+        // ==========================================
+
+        if (ndotl > 0.60) {
+
+            // 明面：完全に元色
+            toonColor =
+                baseColor;
+
+        }
+        else if (ndotl > 0.22) {
+
+            // 中間：少しだけ暗く
+            toonColor =
+                baseColor * 0.78;
+
+        }
+        else {
+
+            // 影面：暗く
+            toonColor =
+                baseColor * 0.52;
+        }
+
+
+        // ==========================================
+        // ごく弱い暖色補正
+        // ==========================================
+
+        vec3 warmTint =
+            vec3(
+                1.02,
+                1.00,
+                0.97
+            );
+
+        toonColor *=
+            warmTint;
+
+
+        // ==========================================
+        // 軽いコントラスト
+        // ==========================================
+
+        float contrast =
+            1.08;
+
+        toonColor =
+            (toonColor - vec3(0.5))
+            * contrast
+            + vec3(0.5);
+
+
+        material.diffuse =
+            clamp(
+                toonColor,
+                0.0,
+                1.0
+            );
+    }
+`,
+        });
+
         const stationPosition = Cesium.Cartesian3.fromDegrees(
             STATION_LONGITUDE,
             STATION_LATITUDE,
@@ -403,8 +507,12 @@ function MapViewer({
                 color: Cesium.Color.WHITE,
                 colorBlendMode: Cesium.ColorBlendMode.MIX,
                 colorBlendAmount: 0,
+
+                customShader: stationToonShader, // ★これ追加
             },
         });
+
+
 
         // ===== 川口駅舎 GLB テスト表示ここまで =====
 
@@ -1177,6 +1285,16 @@ function MapViewer({
         };
 
     }, []);
+
+    useEffect(() => {
+        const viewer = viewerRef.current;
+
+        if (!viewer || viewer.isDestroyed()) return;
+
+        viewer.scene.postProcessStages.ambientOcclusion.enabled =
+            walkMode;
+
+    }, [walkMode]);
 
     useEffect(() => {
         if (!gpsEnabled) {
