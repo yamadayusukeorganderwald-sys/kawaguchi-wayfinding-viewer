@@ -339,48 +339,6 @@ function MapViewer({
         ao.uniforms.directionCount = 4;
         ao.uniforms.stepCount = 12;
 
-        // ===== ペデストリアンデッキ GLB テスト表示 =====
-
-        const DECK_LONGITUDE = 139.71725;
-        const DECK_LATITUDE = 35.8023;
-        const DECK_HEIGHT = -0.5;
-        const DECK_HEADING = 90;
-
-        const deckPosition = Cesium.Cartesian3.fromDegrees(
-            DECK_LONGITUDE,
-            DECK_LATITUDE,
-            DECK_HEIGHT
-        );
-
-        const deckOrientation =
-            Cesium.Transforms.headingPitchRollQuaternion(
-                deckPosition,
-                new Cesium.HeadingPitchRoll(
-                    Cesium.Math.toRadians(DECK_HEADING),
-                    0,
-                    0
-                )
-            );
-
-        const deckModel = viewer.entities.add({
-            name: "川口駅東口ペデストリアンデッキ",
-
-            position: deckPosition,
-
-            orientation: deckOrientation,
-
-            model: {
-                uri: "/models/kawaguchi_pedestrian_deck_01.glb",
-                scale: 1.0,
-                minimumPixelSize: 0,
-                maximumScale: 200,
-
-                color: Cesium.Color.fromCssColorString("#ff4d00"),
-                colorBlendMode: Cesium.ColorBlendMode.MIX,
-                colorBlendAmount: 0,
-            },
-        });
-
         // ===== 川口駅舎 GLB テスト表示 =====
 
         const STATION_LONGITUDE = 139.71755;
