@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import * as Cesium from "cesium";
 import "cesium/Build/Cesium/Widgets/widgets.css";
+
+Cesium.Ion.defaultAccessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJub25jZSI6ImVTVFdabzl0S2IzV25pMm8iLCJqdGkiOiIwYmI3OTliMi0wMzNlLTRkMTQtYjA3My0zYjYyNWIwODMxN2YiLCJpZCI6NDgzMzUyLCJpc3MiOiJodHRwczovL2FwaS5jZXNpdW0uY29tIiwiYXVkIjoidW5kZWZpbmVkX2RlZmF1bHQiLCJpYXQiOjE3ODg4NjM1NTZ9.esSM0jn1Nzy8n_R4fhhNO4w-o1fSSiwP9Ow7cTmR9qo";
+
 import { findShortestRoute } from "../utils/routeSearch";
 import { getClosestPointOnSegment } from "../utils/geometry";
 import { useGeometryDrawing } from "../hooks/useGeometryDrawing";
